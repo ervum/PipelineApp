@@ -9,7 +9,9 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { AssetModel, VaultFolderModel } from '@forge/shared';
+import { AssetsApi } from '../../../../core/api/assets.api';
 import { VaultApi } from '../../../../core/api/vault.api';
 import { StudioStateService } from '../../../../core/state/studio-state.service';
 import { ToastService } from '../../../../core/state/toast.service';
@@ -27,7 +29,7 @@ interface OutlineHeading {
 @Component({
   selector: 'fs-lore-previewer',
   standalone: true,
-  imports: [ButtonComponent, CodeViewComponent, MarkdownPreviewComponent],
+  imports: [FormsModule, ButtonComponent, CodeViewComponent, MarkdownPreviewComponent],
   templateUrl: './lore-previewer.component.html',
   styleUrl: './lore-previewer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +39,7 @@ export class LorePreviewerComponent {
   private readonly studio = inject(StudioStateService);
   private readonly vaultState = inject(VaultStateService);
   private readonly vaultApi = inject(VaultApi);
+  private readonly assetsApi = inject(AssetsApi);
 
   readonly asset = input.required<AssetModel>();
   readonly batchAssets = input<ReadonlyArray<AssetModel>>([]);
@@ -45,7 +48,8 @@ export class LorePreviewerComponent {
   readonly loreText = signal<string>('');
   readonly loading = signal<boolean>(false);
   readonly savingToVault = signal<boolean>(false);
-  readonly viewMode = signal<'READER' | 'SOURCE'>('READER');
+  readonly savingRevision = signal<boolean>(false);
+  readonly viewMode = signal<'READER' | 'SOURCE' | 'EDIT'>('READER');
 
   readonly loreMeta = computed(() => {
     const m = this.asset().metadata;
@@ -124,6 +128,26 @@ export class LorePreviewerComponent {
       file?.fileName ??
       `${this.asset().title.replace(/[^a-zA-Z0-9_-]/g, '_')}${ext}`;
     triggerDownload(file?.downloadUrl ?? this.asset().primaryUrl, fileName);
+  }
+
+  async saveRevision(): Promise<void> {
+    const content = this.loreText().trim();
+    if (!content || this.savingRevision()) return;
+    this.savingRevision.set(true);
+    try {
+      const revised = await this.assetsApi.revise(this.asset().id, {
+        contentText: content,
+      });
+      this.viewMode.set('READER');
+      this.selectBatchAsset.emit(revised);
+      this.toast.success(`Saved lore revision v${revised.version}`);
+    } catch (err) {
+      this.toast.error(
+        err instanceof Error ? err.message : 'Failed to save lore revision',
+      );
+    } finally {
+      this.savingRevision.set(false);
+    }
   }
 
   async saveToVault(): Promise<void> {

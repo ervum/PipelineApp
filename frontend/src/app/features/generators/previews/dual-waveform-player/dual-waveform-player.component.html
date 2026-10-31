@@ -133,6 +133,16 @@
         >
           {{ seamPlaying() ? 'Stop Seam Loop' : 'Audition Loop Seam' }}
         </button>
+        <button
+          fsBtn
+          variant="secondary"
+          size="sm"
+          icon="wand"
+          [disabled]="fixingSeam()"
+          (click)="fixLoopSeam()"
+        >
+          {{ fixingSeam() ? 'Crossfading...' : 'Fix Loop Seam' }}
+        </button>
       </div>
     </div>
 

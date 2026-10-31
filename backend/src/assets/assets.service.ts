@@ -24,6 +24,7 @@ import { toJobModel } from '../common/mappers/job.mapper';
 import { toVaultFileModel } from '../common/mappers/vault.mapper';
 import { sha256Hex } from '../common/utils/sha256';
 import { JobProcessorService } from '../generators/job-processor.service';
+import { editWavAudio } from '../synth/wav-audio.synth';
 import {
   JOB_EVENTS_PUBLISHER,
   JobEventsPublisherPort,
@@ -647,6 +648,395 @@ export class AssetsService {
       created.providerConfigId ? [created.providerConfigId] : [],
     );
     return toAssetModel(created, providerMap);
+  }
+
+  /**
+   * 4.1 In-Stage Text/Code/JSON Revision: saves edited Markdown, Shader Code, or Lore JSON
+   * as a new asset version in the same assetGroupId.
+   */
+  async reviseTextAsset(
+    id: string,
+    dto: { contentText: string; title?: string; notes?: string },
+  ): Promise<AssetModel> {
+    const asset = await this.prisma.generatedAsset.findUnique({
+      where: { id },
+      include: {
+        files: true,
+        project: true,
+      },
+    });
+    if (!asset) {
+      throw new DomainError(ErrorCode.NOT_FOUND, 404, `Asset not found: ${id}`);
+    }
+    const isTextAsset =
+      asset.modality === 'LORE' ||
+      (asset.modality === 'OTHER' &&
+        (asset.subMode === 'SHADER_CODE' || asset.subMode === 'LORE_JSON'));
+    if (!isTextAsset) {
+      throw new DomainError(
+        ErrorCode.VALIDATION_FAILED,
+        400,
+        `Text revision is only supported for LORE, SHADER_CODE, and LORE_JSON assets (got ${asset.modality}/${asset.subMode})`,
+      );
+    }
+
+    if (asset.subMode === 'LORE_JSON') {
+      try {
+        JSON.parse(dto.contentText);
+      } catch (err) {
+        throw new DomainError(
+          ErrorCode.VALIDATION_FAILED,
+          400,
+          `Invalid JSON in LORE_JSON revision: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    const primaryFile =
+      asset.files.find((f) => f.role === AssetFileRole.PRIMARY) ??
+      asset.files[0];
+    const fileName = primaryFile?.fileName ?? 'revised.txt';
+    const mimeType = primaryFile?.mimeType ?? 'text/plain';
+    const format = primaryFile?.format ?? 'txt';
+    const buf = Buffer.from(dto.contentText, 'utf8');
+
+    const maxVer = await this.prisma.generatedAsset.aggregate({
+      where: { assetGroupId: asset.assetGroupId },
+      _max: { version: true },
+    });
+    const nextVersion = (maxVer._max.version ?? asset.version) + 1;
+    const newAssetId = `ast_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
+    const storageKey = StorageKeys.assetFile(
+      asset.project.slug,
+      asset.modality,
+      newAssetId,
+      nextVersion,
+      fileName,
+    );
+    await this.storage.putBuffer(storageKey, buf, mimeType);
+
+    const prevMeta =
+      typeof asset.metadata === 'object' && asset.metadata !== null
+        ? (asset.metadata as Record<string, unknown>)
+        : {};
+    let newMetadata: Record<string, unknown>;
+    if (asset.modality === 'LORE') {
+      const words = dto.contentText
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 0);
+      const wordCount = words.length;
+      const charCount = dto.contentText.length;
+      const readingTimeSec = Math.max(5, Math.round((wordCount / 200) * 60));
+      const excerpt = dto.contentText
+        .replace(/[#>*_`~-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 220);
+      newMetadata = {
+        ...prevMeta,
+        wordCount,
+        charCount,
+        readingTimeSec,
+        excerpt,
+      };
+    } else {
+      newMetadata = {
+        ...prevMeta,
+        lineCount: dto.contentText.split(/\r?\n/).length,
+      };
+    }
+
+    const created = await this.prisma.generatedAsset.create({
+      data: {
+        id: newAssetId,
+        projectId: asset.projectId,
+        jobId: asset.jobId,
+        modality: asset.modality,
+        subMode: asset.subMode,
+        title: dto.title?.trim() || `${asset.title} (Edited)`,
+        assetGroupId: asset.assetGroupId,
+        version: nextVersion,
+        batchIndex: asset.batchIndex,
+        parentAssetId: asset.id,
+        rawPrompt: asset.rawPrompt,
+        enhancedPrompt: asset.enhancedPrompt,
+        negativePrompt: asset.negativePrompt,
+        providerConfigId: asset.providerConfigId,
+        providerKind: asset.providerKind,
+        providerModel: asset.providerModel,
+        tier: asset.tier,
+        seed: asset.seed,
+        costUsd: 0,
+        executionMs: 0,
+        approval: asset.approval,
+        isFavorite: asset.isFavorite,
+        tags: [...new Set([...asset.tags, 'edited'])],
+        notes: dto.notes ?? asset.notes,
+        metadata: newMetadata as unknown as Prisma.InputJsonValue,
+        files: {
+          create: [
+            {
+              role: AssetFileRole.PRIMARY,
+              storageKey,
+              fileName,
+              mimeType,
+              sizeBytes: buf.length,
+              width: null,
+              height: null,
+              durationMs: null,
+              format,
+              sortIndex: 0,
+            },
+          ],
+        },
+      },
+      include: ASSET_INCLUDE,
+    });
+
+    const providerMap = await this.buildProviderNameMap(
+      created.providerConfigId ? [created.providerConfigId] : [],
+    );
+    return toAssetModel(created, providerMap);
+  }
+
+  /**
+   * 4.3 Audio Trim & Seamless Loop Crossfade: trims start/end and applies equal-power
+   * loop crossfading on WAV audio assets, saving a new version in assetGroupId.
+   */
+  async editAudioAsset(
+    id: string,
+    dto: {
+      trimStartMs?: number;
+      trimEndMs?: number;
+      crossfadeMs?: number;
+      normalizePeakDb?: number;
+    },
+  ): Promise<AssetModel> {
+    const asset = await this.prisma.generatedAsset.findUnique({
+      where: { id },
+      include: {
+        files: true,
+        project: true,
+      },
+    });
+    if (!asset) {
+      throw new DomainError(ErrorCode.NOT_FOUND, 404, `Asset not found: ${id}`);
+    }
+    if (
+      asset.modality !== 'MUSIC' &&
+      asset.modality !== 'SFX' &&
+      asset.modality !== 'VOICES'
+    ) {
+      throw new DomainError(
+        ErrorCode.VALIDATION_FAILED,
+        400,
+        `Audio editing is only supported for MUSIC, SFX, and VOICES assets (got ${asset.modality})`,
+      );
+    }
+
+    const primaryFile =
+      asset.files.find((f) => f.role === AssetFileRole.PRIMARY) ??
+      asset.files[0];
+    if (!primaryFile) {
+      throw new DomainError(
+        ErrorCode.NOT_FOUND,
+        404,
+        `Asset ${id} has no primary audio file`,
+      );
+    }
+
+    const rawWav = await this.storage.getBuffer(primaryFile.storageKey);
+    const edited = editWavAudio(rawWav, dto);
+
+    const maxVer = await this.prisma.generatedAsset.aggregate({
+      where: { assetGroupId: asset.assetGroupId },
+      _max: { version: true },
+    });
+    const nextVersion = (maxVer._max.version ?? asset.version) + 1;
+    const newAssetId = `ast_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
+    const storageKey = StorageKeys.assetFile(
+      asset.project.slug,
+      asset.modality,
+      newAssetId,
+      nextVersion,
+      'audio_edited.wav',
+    );
+    await this.storage.putBuffer(storageKey, edited.wav, 'audio/wav');
+
+    const prevMeta =
+      typeof asset.metadata === 'object' && asset.metadata !== null
+        ? (asset.metadata as Record<string, unknown>)
+        : {};
+    const newMetadata = {
+      ...prevMeta,
+      durationMs: edited.durationMs,
+      sampleRate: edited.sampleRate,
+      loopSeamDb: edited.loopSeamDb,
+    };
+
+    const created = await this.prisma.generatedAsset.create({
+      data: {
+        id: newAssetId,
+        projectId: asset.projectId,
+        jobId: asset.jobId,
+        modality: asset.modality,
+        subMode: asset.subMode,
+        title: `${asset.title} (Loop Crossfaded)`,
+        assetGroupId: asset.assetGroupId,
+        version: nextVersion,
+        batchIndex: asset.batchIndex,
+        parentAssetId: asset.id,
+        rawPrompt: asset.rawPrompt,
+        enhancedPrompt: asset.enhancedPrompt,
+        negativePrompt: asset.negativePrompt,
+        providerConfigId: asset.providerConfigId,
+        providerKind: asset.providerKind,
+        providerModel: asset.providerModel,
+        tier: asset.tier,
+        seed: asset.seed,
+        costUsd: 0,
+        executionMs: 0,
+        approval: asset.approval,
+        isFavorite: asset.isFavorite,
+        tags: [...new Set([...asset.tags, 'audio-edit'])],
+        notes: asset.notes,
+        metadata: newMetadata as unknown as Prisma.InputJsonValue,
+        files: {
+          create: [
+            {
+              role: AssetFileRole.PRIMARY,
+              storageKey,
+              fileName: 'audio_edited.wav',
+              mimeType: 'audio/wav',
+              sizeBytes: edited.wav.length,
+              width: null,
+              height: null,
+              durationMs: edited.durationMs,
+              format: 'wav',
+              sortIndex: 0,
+            },
+          ],
+        },
+      },
+      include: ASSET_INCLUDE,
+    });
+
+    const providerMap = await this.buildProviderNameMap(
+      created.providerConfigId ? [created.providerConfigId] : [],
+    );
+    return toAssetModel(created, providerMap);
+  }
+
+  /**
+   * 4.4 PBR Map Derivation: derives Normal and packed Occlusion-Roughness-Metallic (ORM)
+   * maps from an IMAGES or OTHER/VFX_TEXTURE asset and attaches them to the asset.
+   */
+  async derivePbrMaps(
+    id: string,
+    dto: { normalStrength?: number } = {},
+  ): Promise<AssetModel> {
+    const asset = await this.prisma.generatedAsset.findUnique({
+      where: { id },
+      include: {
+        files: true,
+        project: true,
+      },
+    });
+    if (!asset) {
+      throw new DomainError(ErrorCode.NOT_FOUND, 404, `Asset not found: ${id}`);
+    }
+
+    const primaryFile =
+      asset.files.find((f) => f.role === AssetFileRole.PRIMARY) ??
+      asset.files[0];
+    if (!primaryFile) {
+      throw new DomainError(
+        ErrorCode.NOT_FOUND,
+        404,
+        `Asset ${id} has no primary image file`,
+      );
+    }
+
+    const albedoBuf = await this.storage.getBuffer(primaryFile.storageKey);
+    const probe = await this.imageProc.probe(albedoBuf);
+    const maps = await this.imageProc.derivePbrMaps(
+      albedoBuf,
+      dto.normalStrength ?? 2.5,
+    );
+
+    const normalKey = StorageKeys.assetFile(
+      asset.project.slug,
+      asset.modality,
+      asset.id,
+      asset.version,
+      'pbr_normal.png',
+    );
+    const ormKey = StorageKeys.assetFile(
+      asset.project.slug,
+      asset.modality,
+      asset.id,
+      asset.version,
+      'pbr_orm.png',
+    );
+
+    await Promise.all([
+      this.storage.putBuffer(normalKey, maps.normalPng, 'image/png'),
+      this.storage.putBuffer(ormKey, maps.ormPng, 'image/png'),
+    ]);
+
+    const baseSortIdx = asset.files.length;
+    await this.prisma.$transaction([
+      this.prisma.generatedAssetFile.deleteMany({
+        where: {
+          assetId: asset.id,
+          role: {
+            in: [AssetFileRole.TEXTURE_NORMAL, AssetFileRole.TEXTURE_ORM],
+          },
+        },
+      }),
+      this.prisma.generatedAssetFile.createMany({
+        data: [
+          {
+            assetId: asset.id,
+            role: AssetFileRole.TEXTURE_NORMAL,
+            storageKey: normalKey,
+            fileName: 'pbr_normal.png',
+            mimeType: 'image/png',
+            sizeBytes: maps.normalPng.length,
+            width: probe.width,
+            height: probe.height,
+            durationMs: null,
+            format: 'png',
+            sortIndex: baseSortIdx,
+          },
+          {
+            assetId: asset.id,
+            role: AssetFileRole.TEXTURE_ORM,
+            storageKey: ormKey,
+            fileName: 'pbr_orm.png',
+            mimeType: 'image/png',
+            sizeBytes: maps.ormPng.length,
+            width: probe.width,
+            height: probe.height,
+            durationMs: null,
+            format: 'png',
+            sortIndex: baseSortIdx + 1,
+          },
+        ],
+      }),
+    ]);
+
+    const refreshed = await this.prisma.generatedAsset.findUniqueOrThrow({
+      where: { id: asset.id },
+      include: ASSET_INCLUDE,
+    });
+    const providerMap = await this.buildProviderNameMap(
+      refreshed.providerConfigId ? [refreshed.providerConfigId] : [],
+    );
+    return toAssetModel(refreshed, providerMap);
   }
 
   private async buildProviderNameMap(

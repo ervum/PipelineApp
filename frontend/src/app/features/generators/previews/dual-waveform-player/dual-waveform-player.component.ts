@@ -14,6 +14,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { AssetFileModel, AssetModel } from '@forge/shared';
+import { AssetsApi } from '../../../../core/api/assets.api';
+import { ToastService } from '../../../../core/state/toast.service';
 import { ButtonComponent } from '../../../../ui/button/button.component';
 import { IconComponent } from '../../../../ui/icon/icon.component';
 import { AudioEngineService, PlaybackHandle } from '../../engines/audio-engine.service';
@@ -38,6 +40,8 @@ interface StemTrackState {
 })
 export class DualWaveformPlayerComponent {
   private readonly audioEngine = inject(AudioEngineService);
+  private readonly assetsApi = inject(AssetsApi);
+  private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly asset = input.required<AssetModel>();
@@ -52,6 +56,7 @@ export class DualWaveformPlayerComponent {
   readonly seamPlaying = signal(false);
   readonly seamJumpDb = signal<number | null>(null);
   readonly seamWindowSec = signal<number>(2);
+  readonly fixingSeam = signal(false);
 
   private stemHandles = new Map<string, PlaybackHandle>();
   private seamBuffer: AudioBuffer | null = null;
@@ -174,6 +179,24 @@ export class DualWaveformPlayerComponent {
     this.seamHandle?.stop();
     this.seamHandle = null;
     this.seamPlaying.set(false);
+  }
+
+  async fixLoopSeam(): Promise<void> {
+    if (this.fixingSeam()) return;
+    this.fixingSeam.set(true);
+    try {
+      const updated = await this.assetsApi.audioEdit(this.asset().id, {
+        crossfadeMs: 250,
+      });
+      void this.prepareLoopSeam(updated.primaryUrl);
+      this.toast.success(`Loop seam crossfaded (v${updated.version})`);
+    } catch (err) {
+      this.toast.error(
+        err instanceof Error ? err.message : 'Failed to crossfade loop seam',
+      );
+    } finally {
+      this.fixingSeam.set(false);
+    }
   }
 
   private syncStemGains(): void {

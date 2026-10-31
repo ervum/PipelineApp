@@ -241,6 +241,26 @@ export class OutputIngestionService {
       } else if (modality === Modality.IMAGES) {
         const imgParams =
           ctx.params.modality === Modality.IMAGES ? ctx.params : null;
+        if (
+          imgParams?.referenceMode === 'INPAINT' &&
+          imgParams.referenceStorageKey &&
+          imgParams.maskStorageKey
+        ) {
+          try {
+            const [srcBuf, maskBuf] = await Promise.all([
+              this.storage.getBuffer(imgParams.referenceStorageKey),
+              this.storage.getBuffer(imgParams.maskStorageKey),
+            ]);
+            primaryBuf = await this.imageProc.compositeInpaint(
+              srcBuf,
+              primaryBuf,
+              maskBuf,
+            );
+            primaryMime = 'image/png';
+          } catch {
+            // Fall back to raw provider output if reference/mask buffers are unavailable
+          }
+        }
         const aspectPreset = imgParams?.aspectPreset ?? 'SQUARE_1_1';
         const isSeamless =
           aspectPreset === 'SEAMLESS_TILE' ||

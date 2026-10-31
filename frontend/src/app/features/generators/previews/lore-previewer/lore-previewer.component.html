@@ -26,7 +26,28 @@
         >
           Raw Source
         </button>
+        <button
+          type="button"
+          class="view-tab"
+          [class.is-active]="viewMode() === 'EDIT'"
+          (click)="viewMode.set('EDIT')"
+        >
+          Edit Markdown
+        </button>
       </div>
+
+      @if (viewMode() === 'EDIT') {
+        <button
+          fsBtn
+          variant="primary"
+          size="sm"
+          icon="check"
+          [disabled]="savingRevision() || !loreText()"
+          (click)="saveRevision()"
+        >
+          {{ savingRevision() ? 'Saving...' : 'Save Revision' }}
+        </button>
+      }
 
       <button
         fsBtn
@@ -83,6 +104,15 @@
       @if (viewMode() === 'READER') {
         <div class="lore-sheet" [class.lore-sheet--short]="loreMeta().lengthForm === 'SHORT_FORM'">
           <fs-markdown-preview [content]="loreText()" />
+        </div>
+      } @else if (viewMode() === 'EDIT') {
+        <div class="lore-source">
+          <textarea
+            class="fs-input mono"
+            style="width: 100%; min-height: 440px; resize: vertical"
+            [ngModel]="loreText()"
+            (ngModelChange)="loreText.set($event)"
+          ></textarea>
         </div>
       } @else {
         <div class="lore-source">

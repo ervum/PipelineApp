@@ -40,6 +40,26 @@ const PaletteRemapSchema = z.object({
 
 type PaletteRemapDto = z.infer<typeof PaletteRemapSchema>;
 
+const ReviseAssetSchema = z.object({
+  contentText: z.string().min(1).max(500_000),
+  title: z.string().max(160).optional(),
+  notes: z.string().max(4000).optional(),
+});
+type ReviseAssetDto = z.infer<typeof ReviseAssetSchema>;
+
+const AudioEditSchema = z.object({
+  trimStartMs: z.number().min(0).optional(),
+  trimEndMs: z.number().min(0).optional(),
+  crossfadeMs: z.number().min(0).max(10_000).optional(),
+  normalizePeakDb: z.number().min(-24).max(0).optional(),
+});
+type AudioEditDto = z.infer<typeof AudioEditSchema>;
+
+const DerivePbrSchema = z.object({
+  normalStrength: z.number().min(0.2).max(10).optional(),
+});
+type DerivePbrDto = z.infer<typeof DerivePbrSchema>;
+
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
@@ -100,5 +120,32 @@ export class AssetsController {
     @ZodBody(PaletteRemapSchema) dto: PaletteRemapDto,
   ): Promise<AssetModel> {
     return this.assetsService.remapPalette(id, dto);
+  }
+
+  @Post(':id/revise')
+  @HttpCode(HttpStatus.CREATED)
+  async revise(
+    @Param('id') id: string,
+    @ZodBody(ReviseAssetSchema) dto: ReviseAssetDto,
+  ): Promise<AssetModel> {
+    return this.assetsService.reviseTextAsset(id, dto);
+  }
+
+  @Post(':id/audio-edit')
+  @HttpCode(HttpStatus.CREATED)
+  async audioEdit(
+    @Param('id') id: string,
+    @ZodBody(AudioEditSchema) dto: AudioEditDto,
+  ): Promise<AssetModel> {
+    return this.assetsService.editAudioAsset(id, dto);
+  }
+
+  @Post(':id/derive-pbr')
+  @HttpCode(HttpStatus.CREATED)
+  async derivePbr(
+    @Param('id') id: string,
+    @ZodBody(DerivePbrSchema) dto: DerivePbrDto,
+  ): Promise<AssetModel> {
+    return this.assetsService.derivePbrMaps(id, dto);
   }
 }

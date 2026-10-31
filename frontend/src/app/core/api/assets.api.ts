@@ -74,6 +74,39 @@ export class AssetsApi {
     return this.api.post<JobModel>(`/assets/${id}/variation`, { executionMode });
   }
 
+  revise(
+    id: string,
+    dto: { contentText: string; title?: string; notes?: string },
+  ): Promise<AssetModel> {
+    return this.api.post<AssetModel>(`/assets/${id}/revise`, dto);
+  }
+
+  audioEdit(
+    id: string,
+    dto: {
+      trimStartMs?: number;
+      trimEndMs?: number;
+      crossfadeMs?: number;
+      normalizePeakDb?: number;
+    },
+  ): Promise<AssetModel> {
+    return this.api.post<AssetModel>(`/assets/${id}/audio-edit`, dto);
+  }
+
+  derivePbr(
+    id: string,
+    dto: { normalStrength?: number } = {},
+  ): Promise<AssetModel> {
+    return this.api.post<AssetModel>(`/assets/${id}/derive-pbr`, dto);
+  }
+
+  remapPalette(
+    id: string,
+    dto: { targetPaletteHex?: string[]; strength?: number } = {},
+  ): Promise<AssetModel> {
+    return this.api.post<AssetModel>(`/assets/${id}/palette-remap`, dto);
+  }
+
   uploadReference(projectId: string, file: File): Promise<UploadedReference> {
     const fd = new FormData();
     fd.append('file', file);

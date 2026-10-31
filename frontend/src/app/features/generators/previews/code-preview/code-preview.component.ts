@@ -8,7 +8,9 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { AssetModel } from '@forge/shared';
+import { AssetsApi } from '../../../../core/api/assets.api';
 import { ToastService } from '../../../../core/state/toast.service';
 import { triggerDownload } from '../../../../core/utils/download';
 import { ButtonComponent } from '../../../../ui/button/button.component';
@@ -18,17 +20,20 @@ import { IconComponent } from '../../../../ui/icon/icon.component';
 @Component({
   selector: 'fs-code-preview',
   standalone: true,
-  imports: [ButtonComponent, CodeViewComponent, IconComponent],
+  imports: [FormsModule, ButtonComponent, CodeViewComponent, IconComponent],
   templateUrl: './code-preview.component.html',
   styleUrl: './code-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CodePreviewComponent {
   private readonly toast = inject(ToastService);
+  private readonly assetsApi = inject(AssetsApi);
 
   readonly asset = input.required<AssetModel>();
   readonly codeText = signal<string>('');
   readonly loading = signal(false);
+  readonly editing = signal(false);
+  readonly savingRevision = signal(false);
 
   readonly language = computed(() => {
     const m = this.asset().metadata;
@@ -86,6 +91,25 @@ export class CodePreviewComponent {
       file?.fileName ??
       `${this.asset().title.replace(/[^a-zA-Z0-9_-]/g, '_')}${this.extension()}`;
     triggerDownload(file?.downloadUrl ?? this.asset().primaryUrl, fileName);
+  }
+
+  async saveRevision(): Promise<void> {
+    const content = this.codeText();
+    if (!content.trim() || this.savingRevision()) return;
+    this.savingRevision.set(true);
+    try {
+      const revised = await this.assetsApi.revise(this.asset().id, {
+        contentText: content,
+      });
+      this.editing.set(false);
+      this.toast.success(`Saved revision v${revised.version}`);
+    } catch (err) {
+      this.toast.error(
+        err instanceof Error ? err.message : 'Failed to save code revision',
+      );
+    } finally {
+      this.savingRevision.set(false);
+    }
   }
 
   private async fetchCode(url: string): Promise<void> {

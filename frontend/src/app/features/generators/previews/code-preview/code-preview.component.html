@@ -10,6 +10,27 @@
     </div>
 
     <div class="toolbar-right">
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        icon="edit"
+        (click)="editing.set(!editing())"
+      >
+        {{ editing() ? 'Cancel Edit' : 'Edit Code' }}
+      </button>
+      @if (editing()) {
+        <button
+          fsBtn
+          variant="primary"
+          size="sm"
+          icon="check"
+          [disabled]="savingRevision()"
+          (click)="saveRevision()"
+        >
+          {{ savingRevision() ? 'Saving...' : 'Save Revision' }}
+        </button>
+      }
       <button fsBtn variant="secondary" size="sm" icon="copy" (click)="copyCode()">
         Copy Code
       </button>
@@ -20,6 +41,15 @@
   </header>
 
   <div class="cp-body">
-    <fs-code-view [code]="codeText()" [language]="language()" />
+    @if (editing()) {
+      <textarea
+        class="fs-input mono"
+        style="width: 100%; min-height: 420px; resize: vertical"
+        [ngModel]="codeText()"
+        (ngModelChange)="codeText.set($event)"
+      ></textarea>
+    } @else {
+      <fs-code-view [code]="codeText()" [language]="language()" />
+    }
   </div>
 </div>

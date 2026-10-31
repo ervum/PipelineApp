@@ -443,3 +443,142 @@ export function synthesizeVoice(opts: SynthVoiceOptions): {
     sampleRate,
   };
 }
+
+export interface EditWavAudioOptions {
+  trimStartMs?: number;
+  trimEndMs?: number;
+  crossfadeMs?: number;
+  normalizePeakDb?: number;
+}
+
+/**
+ * Decodes a 16-bit PCM WAV buffer, applies start/end trimming, equal-power loop crossfading,
+ * and optional peak normalization, and returns a new PCM16 WAV buffer with loop seam dB metrics.
+ */
+export function editWavAudio(
+  wavBuf: Buffer,
+  opts: EditWavAudioOptions,
+): {
+  wav: Buffer;
+  durationMs: number;
+  sampleRate: number;
+  loopSeamDb: number;
+} {
+  const hdr = parseWavHeader(wavBuf);
+  const numChannels = Math.max(1, hdr.numChannels);
+  const sampleRate = Math.max(8000, hdr.sampleRate);
+  const bytesPerSample = Math.max(2, Math.floor(hdr.bitsPerSample / 8));
+  const blockAlign = numChannels * bytesPerSample;
+  const totalFrames = Math.floor(
+    Math.min(hdr.dataBytes, wavBuf.length - 44) / blockAlign,
+  );
+
+  const channels: Float32Array[] = Array.from(
+    { length: numChannels },
+    () => new Float32Array(totalFrames),
+  );
+
+  for (let i = 0; i < totalFrames; i++) {
+    for (let c = 0; c < numChannels; c++) {
+      const byteOff = 44 + i * blockAlign + c * bytesPerSample;
+      if (byteOff + 2 <= wavBuf.length) {
+        channels[c]![i] = wavBuf.readInt16LE(byteOff) / 32768;
+      }
+    }
+  }
+
+  const startFrame = opts.trimStartMs
+    ? Math.max(0, Math.min(totalFrames - 64, Math.floor((opts.trimStartMs / 1000) * sampleRate)))
+    : 0;
+  const endFrame = opts.trimEndMs
+    ? Math.max(
+        startFrame + 64,
+        Math.min(totalFrames, Math.floor((opts.trimEndMs / 1000) * sampleRate)),
+      )
+    : totalFrames;
+
+  let workingChannels = channels.map((ch) => ch.subarray(startFrame, endFrame));
+  let frameCount = workingChannels[0]?.length ?? 0;
+
+  if (opts.crossfadeMs && opts.crossfadeMs > 0 && frameCount > 128) {
+    const fadeFrames = Math.min(
+      Math.floor(frameCount * 0.4),
+      Math.max(32, Math.floor((opts.crossfadeMs / 1000) * sampleRate)),
+    );
+    const outLen = frameCount - fadeFrames;
+    const fadedChannels: Float32Array[] = Array.from(
+      { length: numChannels },
+      () => new Float32Array(outLen),
+    );
+
+    for (let c = 0; c < numChannels; c++) {
+      const src = workingChannels[c]!;
+      const dst = fadedChannels[c]!;
+      // Copy middle region (fadeFrames .. outLen)
+      for (let i = 0; i < outLen - fadeFrames; i++) {
+        dst[i] = src[fadeFrames + i]!;
+      }
+      // Crossfade tail of src (outLen .. frameCount) with head of src (0 .. fadeFrames)
+      // so the end of dst smoothly approaches src[fadeFrames - 1], matching dst[0] = src[fadeFrames]!
+      const tailRegionStart = outLen - fadeFrames;
+      for (let j = 0; j < fadeFrames; j++) {
+        const t = (j + 1) / fadeFrames;
+        // Raised-cosine S-curve with zero derivative at both endpoints (t=0 and t=1)
+        const w = Math.pow(0.5 * (1 - Math.cos(t * Math.PI)), 1.5);
+        const gainTail = 1 - w;
+        const gainHead = w;
+        const tailSample = src[outLen + j] ?? 0;
+        const headSample = src[j] ?? 0;
+        dst[tailRegionStart + j] = tailSample * gainTail + headSample * gainHead;
+      }
+    }
+
+    workingChannels = fadedChannels;
+    frameCount = outLen;
+  }
+
+  if (typeof opts.normalizePeakDb === 'number' && frameCount > 0) {
+    const targetPeak = Math.min(1.0, Math.pow(10, opts.normalizePeakDb / 20));
+    let maxAbs = 0;
+    for (const ch of workingChannels) {
+      for (let i = 0; i < ch.length; i++) {
+        const a = Math.abs(ch[i]!);
+        if (a > maxAbs) maxAbs = a;
+      }
+    }
+    if (maxAbs > 1e-5) {
+      const scale = targetPeak / maxAbs;
+      workingChannels = workingChannels.map((ch) => {
+        const scaled = new Float32Array(ch.length);
+        for (let i = 0; i < ch.length; i++) {
+          scaled[i] = Math.max(-1, Math.min(1, ch[i]! * scale));
+        }
+        return scaled;
+      });
+    }
+  }
+
+  // Compute 50ms boundary RMS jump in dB
+  const winSamples = Math.min(
+    Math.floor(frameCount / 2),
+    Math.max(32, Math.floor(sampleRate * 0.05)),
+  );
+  const ch0 = workingChannels[0] ?? new Float32Array(0);
+  let sumBefore = 0;
+  let sumAfter = 0;
+  for (let i = 0; i < winSamples; i++) {
+    const b = ch0[frameCount - 1 - i] ?? 0;
+    const a = ch0[i] ?? 0;
+    sumBefore += b * b;
+    sumAfter += a * a;
+  }
+  const rmsBefore = winSamples > 0 ? Math.sqrt(sumBefore / winSamples) : 0;
+  const rmsAfter = winSamples > 0 ? Math.sqrt(sumAfter / winSamples) : 0;
+  const loopSeamDb = Number(
+    Math.abs(20 * Math.log10((rmsAfter + 1e-5) / (rmsBefore + 1e-5))).toFixed(2),
+  );
+
+  const wav = encodeWavPcm16(workingChannels, sampleRate);
+  const durationMs = Math.round((frameCount / sampleRate) * 1000);
+  return { wav, durationMs, sampleRate, loopSeamDb };
+}

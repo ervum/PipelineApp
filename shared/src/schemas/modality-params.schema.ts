@@ -111,8 +111,17 @@ export const ImagesParamsSchema = z.object({
     .default('SQUARE_1_1'),
   styleWeight: z.number().min(0).max(1).default(0.7),
   referenceStorageKey: z.string().nullable().default(null),
+  maskStorageKey: z.string().nullable().optional().default(null),
   referenceMode: z
-    .enum(['NONE', 'IMG2IMG', 'CONTROLNET_CANNY', 'CONTROLNET_DEPTH', 'STYLE_REFERENCE'])
+    .enum([
+      'NONE',
+      'IMG2IMG',
+      'INPAINT',
+      'OUTPAINT',
+      'CONTROLNET_CANNY',
+      'CONTROLNET_DEPTH',
+      'STYLE_REFERENCE',
+    ])
     .default('NONE'),
   referenceStrength: z.number().min(0).max(1).default(0.55),
   batchCount: z.number().int().min(1).max(4).default(1),
