@@ -175,6 +175,7 @@ export class MiddlemanCompilerService {
         attachImages: profile.supportsVision && profile.attachReferenceImages,
         maxImages: profile.maxReferenceImages,
         globalSummary: project.globalSummary,
+        rawPrompt: dto.rawPrompt,
       },
     );
 
@@ -373,6 +374,7 @@ export class MiddlemanCompilerService {
         attachImages: profile.supportsVision && profile.attachReferenceImages,
         maxImages: profile.maxReferenceImages,
         globalSummary: job.project.globalSummary,
+        rawPrompt: job.rawPrompt,
       },
     );
 

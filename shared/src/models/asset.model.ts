@@ -34,6 +34,8 @@ export type AssetMetadata =
       hasAlpha: boolean;
       frameShape: string;
       iconCategory: string;
+      paletteScore?: number;
+      dominantHex?: string[];
     }
   | {
       modality: 'ASSETS_3D';
@@ -51,6 +53,8 @@ export type AssetMetadata =
       aspectPreset: string;
       tileable: boolean;
       tileSeamScore?: number;
+      paletteScore?: number;
+      dominantHex?: string[];
     }
   | {
       modality: 'VIDEO';

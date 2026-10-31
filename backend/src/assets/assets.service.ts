@@ -302,6 +302,15 @@ export class AssetsService {
         width: targetFile.width,
         height: targetFile.height,
         durationMs: targetFile.durationMs,
+        metadata: {
+          ...(typeof asset.metadata === 'object' && asset.metadata !== null
+            ? (asset.metadata as Record<string, unknown>)
+            : {}),
+          enhancedPrompt: asset.enhancedPrompt,
+          rawPrompt: asset.rawPrompt,
+          tags: asset.tags,
+          notes: asset.notes,
+        } as unknown as Prisma.InputJsonValue,
         visionStatus: shouldRunVision
           ? VisionStatus.PENDING
           : VisionStatus.NONE,
@@ -461,6 +470,183 @@ export class AssetsService {
     this.eventsPublisher.jobCreated({ job: model });
     void this.processor.tick();
     return model;
+  }
+
+  async remapPalette(
+    id: string,
+    dto: { targetPaletteHex?: string[]; strength?: number } = {},
+  ): Promise<AssetModel> {
+    const asset = await this.prisma.generatedAsset.findUnique({
+      where: { id },
+      include: {
+        files: true,
+        project: true,
+      },
+    });
+    if (!asset) {
+      throw new DomainError(ErrorCode.NOT_FOUND, 404, `Asset not found: ${id}`);
+    }
+    if (asset.modality !== 'ICONS_2D' && asset.modality !== 'IMAGES') {
+      throw new DomainError(
+        ErrorCode.VALIDATION_FAILED,
+        400,
+        `Palette remap is only supported for ICONS_2D and IMAGES assets (got ${asset.modality})`,
+      );
+    }
+
+    const primaryFile =
+      asset.files.find((f) => f.role === AssetFileRole.PRIMARY) ??
+      asset.files[0];
+    if (!primaryFile) {
+      throw new DomainError(
+        ErrorCode.NOT_FOUND,
+        404,
+        `Asset ${id} has no primary image file`,
+      );
+    }
+
+    let palette = (dto.targetPaletteHex ?? []).filter((h) =>
+      /^#[0-9A-Fa-f]{6}$/.test(h.trim()),
+    );
+    if (palette.length === 0) {
+      const vaultImages = await this.prisma.vaultFile.findMany({
+        where: { projectId: asset.projectId, kind: VaultFileKind.IMAGE },
+        select: { styleDescriptorJson: true },
+        take: 20,
+      });
+      const hexSet = new Set<string>();
+      for (const vi of vaultImages) {
+        const sd =
+          typeof vi.styleDescriptorJson === 'object' &&
+          vi.styleDescriptorJson !== null
+            ? (vi.styleDescriptorJson as Record<string, unknown>)
+            : null;
+        const pHex = sd?.['paletteHex'];
+        if (Array.isArray(pHex)) {
+          for (const c of pHex) {
+            if (typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.trim())) {
+              hexSet.add(c.trim().toUpperCase());
+            }
+          }
+        }
+      }
+      if (hexSet.size === 0 && asset.project.accentHex) {
+        hexSet.add(asset.project.accentHex.toUpperCase());
+      }
+      palette = [...hexSet];
+    }
+
+    const rawBuf = await this.storage.getBuffer(primaryFile.storageKey);
+    const remappedBuf = await this.imageProc.remapToPalette(
+      rawBuf,
+      palette,
+      dto.strength ?? 0.85,
+    );
+    const [probe, thumbBuf, compliance] = await Promise.all([
+      this.imageProc.probe(remappedBuf),
+      this.imageProc.thumbnail(remappedBuf, 384),
+      this.imageProc.scorePaletteCompliance(remappedBuf, palette),
+    ]);
+
+    const maxVer = await this.prisma.generatedAsset.aggregate({
+      where: { assetGroupId: asset.assetGroupId },
+      _max: { version: true },
+    });
+    const nextVersion = (maxVer._max.version ?? asset.version) + 1;
+    const newAssetId = `ast_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
+    const primaryKey = StorageKeys.assetFile(
+      asset.project.slug,
+      asset.modality,
+      newAssetId,
+      nextVersion,
+      'remapped.png',
+    );
+    const thumbKey = StorageKeys.assetFile(
+      asset.project.slug,
+      asset.modality,
+      newAssetId,
+      nextVersion,
+      'thumb.webp',
+    );
+    await Promise.all([
+      this.storage.putBuffer(primaryKey, remappedBuf, 'image/png'),
+      this.storage.putBuffer(thumbKey, thumbBuf, 'image/webp'),
+    ]);
+
+    const prevMeta =
+      typeof asset.metadata === 'object' && asset.metadata !== null
+        ? (asset.metadata as Record<string, unknown>)
+        : {};
+    const newMetadata = {
+      ...prevMeta,
+      paletteScore: compliance.paletteScore,
+      dominantHex: compliance.dominantHex,
+    };
+
+    const created = await this.prisma.generatedAsset.create({
+      data: {
+        id: newAssetId,
+        projectId: asset.projectId,
+        jobId: asset.jobId,
+        modality: asset.modality,
+        subMode: asset.subMode,
+        title: `${asset.title} (Palette Remap)`,
+        assetGroupId: asset.assetGroupId,
+        version: nextVersion,
+        batchIndex: asset.batchIndex,
+        parentAssetId: asset.id,
+        rawPrompt: asset.rawPrompt,
+        enhancedPrompt: asset.enhancedPrompt,
+        negativePrompt: asset.negativePrompt,
+        providerConfigId: asset.providerConfigId,
+        providerKind: asset.providerKind,
+        providerModel: asset.providerModel,
+        tier: asset.tier,
+        seed: asset.seed,
+        costUsd: 0,
+        executionMs: 0,
+        approval: asset.approval,
+        isFavorite: asset.isFavorite,
+        tags: [...asset.tags, 'palette-remap'],
+        notes: asset.notes,
+        metadata: newMetadata as unknown as Prisma.InputJsonValue,
+        files: {
+          create: [
+            {
+              role: AssetFileRole.PRIMARY,
+              storageKey: primaryKey,
+              fileName: 'remapped.png',
+              mimeType: 'image/png',
+              sizeBytes: remappedBuf.length,
+              width: probe.width,
+              height: probe.height,
+              durationMs: null,
+              format: 'png',
+              sortIndex: 0,
+            },
+            {
+              role: AssetFileRole.THUMBNAIL,
+              storageKey: thumbKey,
+              fileName: 'thumb.webp',
+              mimeType: 'image/webp',
+              sizeBytes: thumbBuf.length,
+              width: 384,
+              height: 384,
+              durationMs: null,
+              format: 'webp',
+              sortIndex: 1,
+            },
+          ],
+        },
+      },
+      include: ASSET_INCLUDE,
+    });
+
+    const providerMap = await this.buildProviderNameMap(
+      created.providerConfigId ? [created.providerConfigId] : [],
+    );
+    return toAssetModel(created, providerMap);
   }
 
   private async buildProviderNameMap(

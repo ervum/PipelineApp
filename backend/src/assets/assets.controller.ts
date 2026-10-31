@@ -33,6 +33,13 @@ const CreateVariationSchema = z.object({
 
 type CreateVariationDto = z.infer<typeof CreateVariationSchema>;
 
+const PaletteRemapSchema = z.object({
+  targetPaletteHex: z.array(z.string()).optional(),
+  strength: z.number().min(0).max(1).optional(),
+});
+
+type PaletteRemapDto = z.infer<typeof PaletteRemapSchema>;
+
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
@@ -84,5 +91,14 @@ export class AssetsController {
       id,
       dto.executionMode as ExecutionMode,
     );
+  }
+
+  @Post(':id/palette-remap')
+  @HttpCode(HttpStatus.CREATED)
+  async remapPalette(
+    @Param('id') id: string,
+    @ZodBody(PaletteRemapSchema) dto: PaletteRemapDto,
+  ): Promise<AssetModel> {
+    return this.assetsService.remapPalette(id, dto);
   }
 }

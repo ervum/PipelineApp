@@ -32,6 +32,7 @@ function makeVaultFile(
     visionModel: overrides.visionModel ?? null,
     visionError: overrides.visionError ?? null,
     visionAnalyzedAt: overrides.visionAnalyzedAt ?? null,
+    visionAttempts: overrides.visionAttempts ?? 0,
     width: overrides.width ?? null,
     height: overrides.height ?? null,
     durationMs: overrides.durationMs ?? null,

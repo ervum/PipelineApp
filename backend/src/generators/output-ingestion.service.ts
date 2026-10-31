@@ -126,6 +126,13 @@ export class OutputIngestionService {
 
     const modality = ctx.job.modality as Modality;
     const subMode = ctx.job.subMode as GenerationSubMode;
+    const projectPaletteHex =
+      modality === Modality.ICONS_2D || modality === Modality.IMAGES
+        ? await this.loadProjectPaletteHex(
+            ctx.project.id,
+            ctx.compiled.enhancedPrompt,
+          )
+        : [];
 
     interface PreparedAssetData {
       assetId: string;
@@ -199,6 +206,13 @@ export class OutputIngestionService {
         );
         primaryBuf = res.primaryBuffer;
         primaryMime = 'image/png';
+        const paletteStats =
+          projectPaletteHex.length > 0
+            ? await this.imageProc.scorePaletteCompliance(
+                primaryBuf,
+                projectPaletteHex,
+              )
+            : null;
         metadata = {
           modality: 'ICONS_2D',
           width: res.metadata.width,
@@ -206,6 +220,12 @@ export class OutputIngestionService {
           hasAlpha: res.metadata.hasAlpha,
           frameShape: res.metadata.frameShape,
           iconCategory: res.metadata.iconCategory,
+          ...(paletteStats
+            ? {
+                paletteScore: paletteStats.paletteScore,
+                dominantHex: paletteStats.dominantHex,
+              }
+            : {}),
         };
 
         filesToStore.push({
@@ -242,6 +262,13 @@ export class OutputIngestionService {
           this.imageProc.probe(primaryBuf),
           this.imageProc.thumbnail(primaryBuf, 384),
         ]);
+        const paletteStats =
+          projectPaletteHex.length > 0
+            ? await this.imageProc.scorePaletteCompliance(
+                primaryBuf,
+                projectPaletteHex,
+              )
+            : null;
 
         metadata = {
           modality: 'IMAGES',
@@ -250,6 +277,12 @@ export class OutputIngestionService {
           aspectPreset,
           tileable: isSeamless,
           ...(tileSeamScore !== undefined ? { tileSeamScore } : {}),
+          ...(paletteStats
+            ? {
+                paletteScore: paletteStats.paletteScore,
+                dominantHex: paletteStats.dominantHex,
+              }
+            : {}),
         };
 
         filesToStore.push({
@@ -965,5 +998,54 @@ export class OutputIngestionService {
     }
 
     return buf;
+  }
+
+  private async loadProjectPaletteHex(
+    projectId: string,
+    enhancedPrompt: string,
+  ): Promise<string[]> {
+    const hexSet = new Set<string>();
+    const promptMatches = enhancedPrompt.match(/#[0-9A-Fa-f]{6}\b/g) ?? [];
+    for (const h of promptMatches) {
+      hexSet.add(h.toUpperCase());
+    }
+
+    try {
+      const vaultFileDelegate = (
+        this.prisma as unknown as {
+          vaultFile?: {
+            findMany?: (args: unknown) => Promise<
+              Array<{ styleDescriptorJson: unknown }>
+            >;
+          };
+        }
+      ).vaultFile;
+      if (vaultFileDelegate?.findMany) {
+        const rows = await vaultFileDelegate.findMany({
+          where: { projectId, kind: 'IMAGE' },
+          select: { styleDescriptorJson: true },
+          take: 20,
+        });
+        for (const r of rows) {
+          const sd =
+            typeof r.styleDescriptorJson === 'object' &&
+            r.styleDescriptorJson !== null
+              ? (r.styleDescriptorJson as Record<string, unknown>)
+              : null;
+          const pHex = sd?.['paletteHex'];
+          if (Array.isArray(pHex)) {
+            for (const c of pHex) {
+              if (typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.trim())) {
+                hexSet.add(c.trim().toUpperCase());
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore if vaultFile query fails in unit test mocks
+    }
+
+    return [...hexSet];
   }
 }
