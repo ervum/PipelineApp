@@ -4,6 +4,7 @@ import {
   ContextFileRef,
   JobModel,
   LlmUsage,
+  McpInvocationLogEntry,
   VaultFileModel,
 } from '../models';
 import { CompiledPrompt } from '../schemas';
@@ -104,6 +105,11 @@ export interface ProviderHealthEvent {
   message: string | null;
 }
 
+export interface McpInvocationEvent {
+  entry: McpInvocationLogEntry;
+  totalInvocations: number;
+}
+
 export interface ServerToClientEvents {
   'job:created': (p: JobCreatedEvent) => void;
   'job:status': (p: JobStatusEvent) => void;
@@ -116,6 +122,7 @@ export interface ServerToClientEvents {
   'job:failed': (p: JobFailedEvent) => void;
   'vault:file-updated': (p: VaultFileUpdatedEvent) => void;
   'provider:health': (p: ProviderHealthEvent) => void;
+  'mcp:invocation': (p: McpInvocationEvent) => void;
 }
 
 export interface Ack {

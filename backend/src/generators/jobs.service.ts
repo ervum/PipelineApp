@@ -193,6 +193,11 @@ export class JobsService {
         ? dto.params.seed
         : Math.floor(Math.random() * SEED_MAX);
 
+    const maxAttempts =
+      provider.settings.autoRetry === false
+        ? 1
+        : Math.max(1, Math.min(10, provider.settings.maxAttempts ?? 3));
+
     const created = await this.prisma.$transaction(async (tx) => {
       const job = await tx.generationJob.create({
         data: {
@@ -212,6 +217,7 @@ export class JobsService {
           tier: provider.tier,
           seed,
           batchCount,
+          maxAttempts,
         },
         include: JOB_RELATIONS_INCLUDE,
       });
@@ -469,6 +475,7 @@ export class JobsService {
       JobStatus.QUEUED,
       {
         attempt: { increment: 1 },
+        notBefore: null,
         errorCode: null,
         errorMessage: null,
         completedAt: null,

@@ -110,6 +110,7 @@ export type AssetMetadata =
       language?: string;
       schemaKind?: string;
       lineCount?: number;
+      tileSeamScore?: number;
     };
 
 export interface AssetModel {

@@ -54,6 +54,25 @@ export class JobQueueWidgetComponent {
     return `${sec}s`;
   }
 
+  retryLabelFor(job: JobModel): string | null {
+    const attempt = job.attempt ?? 1;
+    const maxAttempts = job.maxAttempts ?? 3;
+    if (attempt <= 1 && !job.notBefore) {
+      return null;
+    }
+    if (job.notBefore) {
+      const waitMs = Date.parse(job.notBefore) - this.nowService.now();
+      if (waitMs > 0) {
+        const waitSec = Math.max(1, Math.ceil(waitMs / 1000));
+        return `Retrying (${attempt}/${maxAttempts}) in ${waitSec}s`;
+      }
+    }
+    if (attempt > 1) {
+      return `Attempt ${attempt}/${maxAttempts}`;
+    }
+    return null;
+  }
+
   openJob(job: JobModel): void {
     const route = routeForModality(job.modality);
     this.jobStore.focus(job.modality, job.id);

@@ -237,7 +237,9 @@ export class JobProcessorService
       "updatedAt" = now()
       WHERE "id" IN (
         SELECT "id" FROM "generation_jobs"
-        WHERE "status" = 'QUEUED' AND ("skipMiddleman" = true OR "compiledPayload" IS NOT NULL)
+        WHERE "status" = 'QUEUED'
+          AND ("notBefore" IS NULL OR "notBefore" <= now())
+          AND ("skipMiddleman" = true OR "compiledPayload" IS NOT NULL)
         ORDER BY "createdAt" ASC
         LIMIT ${free}
         FOR UPDATE SKIP LOCKED
@@ -267,7 +269,10 @@ export class JobProcessorService
       UPDATE "generation_jobs" SET "status" = 'COMPILING', "updatedAt" = now()
       WHERE "id" IN (
         SELECT "id" FROM "generation_jobs"
-        WHERE "status" = 'QUEUED' AND "skipMiddleman" = false AND "compiledPayload" IS NULL
+        WHERE "status" = 'QUEUED'
+          AND ("notBefore" IS NULL OR "notBefore" <= now())
+          AND "skipMiddleman" = false
+          AND "compiledPayload" IS NULL
         ORDER BY "createdAt" ASC LIMIT ${free} FOR UPDATE SKIP LOCKED)
       RETURNING "id";
     `;
@@ -303,8 +308,12 @@ export class JobProcessorService
     let free = JOB_MAX_CONCURRENT_GLOBAL - this.inflight.size;
     if (free <= 0) return;
 
+    const now = new Date();
     const readyCandidates = await this.prisma.generationJob.findMany({
-      where: { status: JobStatus.READY },
+      where: {
+        status: JobStatus.READY,
+        OR: [{ notBefore: null }, { notBefore: { lte: now } }],
+      },
       orderBy: { createdAt: 'asc' },
       take: free * 2,
       select: { id: true, providerConfigId: true },

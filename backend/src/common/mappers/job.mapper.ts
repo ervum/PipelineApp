@@ -83,6 +83,8 @@ export function toJobModel(
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
     attempt: row.attempt,
+    maxAttempts: row.maxAttempts ?? 3,
+    notBefore: row.notBefore ? row.notBefore.toISOString() : null,
     assetIds: (row.assets ?? []).map((a) => a.id),
     createdAt: row.createdAt.toISOString(),
     dispatchedAt: row.dispatchedAt ? row.dispatchedAt.toISOString() : null,

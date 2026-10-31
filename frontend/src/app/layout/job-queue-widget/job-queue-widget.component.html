@@ -37,6 +37,9 @@
         <div class="queue-row__meta">
           <fs-tier-badge [tier]="job.tier" />
           <fs-status-pill [status]="job.status" />
+          @if (retryLabelFor(job); as retryLabel) {
+            <span class="summary-chip summary-chip--amber">{{ retryLabel }}</span>
+          }
         </div>
         <fs-progress [value]="progressValue(job)" [accent]="progressAccent(job)" />
       </div>

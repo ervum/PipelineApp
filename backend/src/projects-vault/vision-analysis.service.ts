@@ -1,5 +1,11 @@
 import { estimateTokens, HexColorSchema, VisionStatus } from '@forge/shared';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import sharp from 'sharp';
 import { z } from 'zod';
@@ -50,12 +56,20 @@ const VISION_USER_INSTRUCTION = [
   '  }',
 ].join('\n');
 
+const MAX_VISION_ATTEMPTS = 3;
+const VISION_POLL_INTERVAL_MS = 2000;
+
 @Injectable()
-export class VisionAnalysisService {
+export class VisionAnalysisService
+  implements OnApplicationBootstrap, OnApplicationShutdown
+{
   private readonly logger = new Logger(VisionAnalysisService.name);
   private readonly queue: Array<{ fileId: string; middlemanProfileId?: string }> = [];
+  private readonly inflightFileIds = new Set<string>();
   private activeCount = 0;
   private readonly maxConcurrency = 2;
+  private pollTimer: NodeJS.Timeout | null = null;
+  private shuttingDown = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -65,14 +79,105 @@ export class VisionAnalysisService {
     @Inject(JOB_EVENTS_PUBLISHER) private readonly events: JobEventsPublisherPort,
   ) {}
 
+  async onApplicationBootstrap(): Promise<void> {
+    this.shuttingDown = false;
+    try {
+      await this.recover();
+    } catch (err) {
+      this.logger.warn(
+        `Vision boot recovery warning: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    this.pollTimer = setInterval(() => {
+      void this.pollPendingFromDb();
+    }, VISION_POLL_INTERVAL_MS);
+    this.pollTimer.unref?.();
+  }
+
+  onApplicationShutdown(): void {
+    this.shuttingDown = true;
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  async recover(): Promise<void> {
+    if (!this.prisma.vaultFile?.findMany) return;
+
+    const interrupted = await this.prisma.vaultFile.findMany({
+      where: {
+        visionStatus: { in: [VisionStatus.RUNNING, VisionStatus.PENDING] },
+      },
+      include: { folder: { select: { path: true } } },
+    });
+
+    for (const file of interrupted) {
+      if (file.visionStatus === VisionStatus.RUNNING) {
+        if ((file.visionAttempts ?? 0) >= MAX_VISION_ATTEMPTS) {
+          const failed = await this.prisma.vaultFile.update({
+            where: { id: file.id },
+            data: {
+              visionStatus: VisionStatus.FAILED,
+              visionError: `Exceeded max vision attempts (${MAX_VISION_ATTEMPTS}) across restarts`,
+            },
+            include: { folder: { select: { path: true } } },
+          });
+          this.events.vaultFileUpdated({
+            projectId: failed.projectId,
+            file: toVaultFileModel(failed),
+          });
+          continue;
+        }
+        await this.prisma.vaultFile.update({
+          where: { id: file.id },
+          data: { visionStatus: VisionStatus.PENDING },
+        });
+      }
+      this.enqueue(file.id);
+    }
+  }
+
   enqueue(fileId: string, middlemanProfileId?: string): void {
-    this.queue.push({ fileId, middlemanProfileId });
+    if (
+      !this.inflightFileIds.has(fileId) &&
+      !this.queue.some((q) => q.fileId === fileId)
+    ) {
+      this.queue.push({ fileId, middlemanProfileId });
+    }
     this.drainQueue();
+  }
+
+  private async pollPendingFromDb(): Promise<void> {
+    if (
+      this.shuttingDown ||
+      this.activeCount >= this.maxConcurrency ||
+      !this.prisma.vaultFile?.findMany
+    ) {
+      return;
+    }
+    try {
+      const pendingRows = await this.prisma.vaultFile.findMany({
+        where: { visionStatus: VisionStatus.PENDING },
+        orderBy: { updatedAt: 'asc' },
+        take: this.maxConcurrency * 2,
+        select: { id: true },
+      });
+      for (const row of pendingRows) {
+        this.enqueue(row.id);
+      }
+    } catch {
+      // Ignore transient poll errors
+    }
   }
 
   private drainQueue(): void {
     while (this.activeCount < this.maxConcurrency && this.queue.length > 0) {
       const next = this.queue.shift()!;
+      if (this.inflightFileIds.has(next.fileId)) {
+        continue;
+      }
+      this.inflightFileIds.add(next.fileId);
       this.activeCount++;
       this.analyzeNow(next.fileId, next.middlemanProfileId)
         .catch((err) => {
@@ -81,6 +186,7 @@ export class VisionAnalysisService {
           );
         })
         .finally(() => {
+          this.inflightFileIds.delete(next.fileId);
           this.activeCount--;
           this.drainQueue();
         });
@@ -113,11 +219,13 @@ export class VisionAnalysisService {
       return;
     }
 
+    const nextAttempt = (file.visionAttempts ?? 0) + 1;
     const running = await this.prisma.vaultFile.update({
       where: { id: fileId },
       data: {
         visionStatus: VisionStatus.RUNNING,
         visionError: null,
+        visionAttempts: nextAttempt,
       },
       include: { folder: { select: { path: true } } },
     });
@@ -181,17 +289,20 @@ export class VisionAnalysisService {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const failed = await this.prisma.vaultFile.update({
+      const shouldRequeue = nextAttempt < MAX_VISION_ATTEMPTS;
+      const updated = await this.prisma.vaultFile.update({
         where: { id: fileId },
         data: {
-          visionStatus: VisionStatus.FAILED,
+          visionStatus: shouldRequeue
+            ? VisionStatus.PENDING
+            : VisionStatus.FAILED,
           visionError: msg.slice(0, 500),
         },
         include: { folder: { select: { path: true } } },
       });
       this.events.vaultFileUpdated({
-        projectId: failed.projectId,
-        file: toVaultFileModel(failed),
+        projectId: updated.projectId,
+        file: toVaultFileModel(updated),
       });
     }
   }

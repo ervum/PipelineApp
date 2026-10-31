@@ -32,11 +32,14 @@ describe('job-state-machine', () => {
     expect(canTransition(JobStatus.DISPATCHING, JobStatus.INGESTING)).toBe(true);
   });
 
-  it('enforces terminal states and only allows retry from FAILED -> QUEUED', () => {
+  it('enforces terminal states and allows retry transitions', () => {
     expect(TERMINAL_JOB_STATUSES).toEqual(['COMPLETED', 'FAILED', 'CANCELLED']);
     expect(JOB_TRANSITIONS.COMPLETED).toEqual([]);
     expect(JOB_TRANSITIONS.CANCELLED).toEqual([]);
     expect(canTransition(JobStatus.FAILED, JobStatus.QUEUED)).toBe(true);
+    expect(canTransition(JobStatus.FAILED, JobStatus.READY)).toBe(true);
+    expect(canTransition(JobStatus.RUNNING, JobStatus.READY)).toBe(true);
+    expect(canTransition(JobStatus.COMPILING, JobStatus.QUEUED)).toBe(true);
     expect(canTransition(JobStatus.FAILED, JobStatus.RUNNING)).toBe(false);
     expect(canTransition(JobStatus.COMPLETED, JobStatus.QUEUED)).toBe(false);
   });

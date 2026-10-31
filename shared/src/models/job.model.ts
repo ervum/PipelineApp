@@ -41,6 +41,8 @@ export interface JobModel {
   errorCode: string | null;
   errorMessage: string | null;
   attempt: number;
+  maxAttempts?: number;
+  notBefore?: string | null;
   assetIds: string[];
   createdAt: string;
   dispatchedAt: string | null;

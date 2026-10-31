@@ -52,6 +52,17 @@ This document records implementation choices made where minor low-level details 
 3. **Model Context Protocol (MCP) Server & 22 AI Tools (`/api/v1/mcp` + `npm run mcp:stdio` + `/mcp` UI)**:
    - Implemented a full JSON-RPC 2.0 MCP server (`POST /api/v1/mcp`, `GET /api/v1/mcp/sse`, and stdio transport `backend/src/mcp/mcp-stdio.ts`) exposing 22 tools across all 9 asset generators, Project Vault, Middleman compiler, and Asset Library. Generator tools default to `waitForCompletion: true` and return inline base64 `image` blocks or Markdown text plus direct download URLs and optional `exportToPath` disk writes so AI coding assistants (such as Antigravity) can generate and immediately use assets in a single tool call.
 
+## Phase 1 Reliability & Correctness Roadmap
+
+1. **Job-Level Automatic Retry with Backoff (`notBefore` + `maxAttempts`)**:
+   - Added `maxAttempts` (`@default(3)`) and `notBefore` (`DateTime?`) to `GenerationJob`, plus `autoRetry` and `maxAttempts` in `ProviderSettingsSchema`. When `JobStateService.transition()` receives `to === JobStatus.FAILED` with `{ retryable: true }`, a retryable error code, and `attempt < maxAttempts`, it automatically transitions the job to `READY` (if compiled) or `QUEUED` (if uncompiled), increments `attempt`, and sets `notBefore = now + backoffDelayMs(attempt)`.
+2. **Batched Variation Lineage & `VFX_TEXTURE` Seam Score**:
+   - `OutputIngestionService.ingest()` keeps all batch outputs (`0..N-1`) of a variation job inside the parent's `assetGroupId` with sequential versions (`nextGroupVersion + groupIdx`), and persists `tileSeamScore` on `OTHER` / `VFX_TEXTURE` metadata.
+3. **Crash-Resilient Vision Queue & Persistent Cross-Process MCP Logs**:
+   - `VisionAnalysisService` implements `OnApplicationBootstrap` to recover interrupted `RUNNING` / `PENDING` `VaultFile` rows on startup and retries failed analyses up to `MAX_VISION_ATTEMPTS = 3`.
+   - Added `McpInvocationLog` (`mcp_invocation_logs`) and the `mcp:invocation` Socket.IO event so invocations from both `HTTP_RPC`, `PLAYGROUND`, and separate `STDIO` processes are persisted and streamed to `/mcp`.
+
+
 
 
 

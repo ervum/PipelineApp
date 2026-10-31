@@ -5,6 +5,7 @@ import {
   JobFailedEvent,
   JobProgressEvent,
   JobStatusEvent,
+  McpInvocationEvent,
   MiddlemanChunkEvent,
   MiddlemanCompleteEvent,
   MiddlemanErrorEvent,
@@ -162,6 +163,16 @@ export class JobEventsPublisher implements JobEventsPublisherPort {
       return;
     }
     this.server.emit('provider:health', event);
+  }
+
+  mcpInvocation(event: McpInvocationEvent): void {
+    if (!this.server) {
+      this.logger.debug(
+        `[mcp:invocation] tool=${event.entry.toolName} transport=${event.entry.transport}`,
+      );
+      return;
+    }
+    this.server.emit('mcp:invocation', event);
   }
 
   private flushJobChunk(jobId: string): void {

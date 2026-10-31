@@ -7,11 +7,22 @@ import {
 import { Inject, Injectable } from '@nestjs/common';
 import { GenerationJob, Prisma } from '@prisma/client';
 import { DomainError } from '../common/errors/domain.error';
+import { backoffDelayMs } from '../common/utils/backoff';
 import {
   JOB_EVENTS_PUBLISHER,
   JobEventsPublisherPort,
 } from '../orchestrator/job-events.port';
 import { PrismaService } from '../prisma/prisma.service';
+
+const NON_RETRYABLE_ERROR_CODES = new Set<string>([
+  ErrorCode.PROVIDER_AUTH_FAILED,
+  ErrorCode.VALIDATION_FAILED,
+  ErrorCode.MODALITY_UNSUPPORTED,
+  ErrorCode.NOT_FOUND,
+  ErrorCode.PROVIDER_NOT_CONFIGURED,
+  ErrorCode.INVALID_TRANSITION,
+  ErrorCode.PAYLOAD_TOO_LARGE,
+]);
 
 interface LockedJobRow {
   id: string;
@@ -20,6 +31,10 @@ interface LockedJobRow {
   startedAt: Date | null;
   errorCode: string | null;
   errorMessage: string | null;
+  attempt?: number;
+  maxAttempts?: number;
+  compiledPayload?: unknown;
+  skipMiddleman?: boolean;
 }
 
 @Injectable()
@@ -39,10 +54,11 @@ export class JobStateService {
   ): Promise<GenerationJob> {
     const now = new Date();
 
-    const { updated, from, projectId } = await this.prisma.$transaction(
-      async (tx) => {
+    const { updated, from, effectiveTo, effectiveMsg, projectId } =
+      await this.prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<LockedJobRow[]>`
-          SELECT "id", "projectId", "status", "startedAt", "errorCode", "errorMessage"
+          SELECT "id", "projectId", "status", "startedAt", "errorCode", "errorMessage",
+                 "attempt", "maxAttempts", "compiledPayload", "skipMiddleman"
           FROM "generation_jobs"
           WHERE "id" = ${jobId}
           FOR UPDATE
@@ -65,6 +81,62 @@ export class JobStateService {
           );
         }
 
+        const patchErrorCode =
+          typeof patch.errorCode === 'string'
+            ? patch.errorCode
+            : row.errorCode ?? '';
+        const canAutoRetry =
+          to === JobStatus.FAILED &&
+          opts?.retryable === true &&
+          !NON_RETRYABLE_ERROR_CODES.has(patchErrorCode) &&
+          typeof row.attempt === 'number' &&
+          typeof row.maxAttempts === 'number' &&
+          row.attempt < row.maxAttempts;
+
+        if (canAutoRetry) {
+          const nextAttempt = (row.attempt ?? 1) + 1;
+          const maxAttempts = row.maxAttempts ?? 3;
+          const delayMs = backoffDelayMs(row.attempt ?? 1);
+          const notBefore = new Date(now.getTime() + delayMs);
+          const hasCompiled =
+            (row.compiledPayload !== null &&
+              row.compiledPayload !== undefined) ||
+            Boolean(row.skipMiddleman);
+          const retryTarget = hasCompiled
+            ? JobStatus.READY
+            : JobStatus.QUEUED;
+          const retryMsg = `Retrying (${nextAttempt}/${maxAttempts}) in ${Math.max(1, Math.round(delayMs / 1000))}s — ${message || patchErrorCode || 'Transient error'}`;
+
+          const jobRow = await tx.generationJob.update({
+            where: { id: jobId },
+            data: {
+              ...patch,
+              status: retryTarget,
+              attempt: nextAttempt,
+              notBefore,
+              completedAt: null,
+            },
+          });
+
+          await tx.generationJobEvent.create({
+            data: {
+              jobId,
+              type: 'retry',
+              fromStatus: currentStatus,
+              toStatus: retryTarget,
+              message: retryMsg,
+            },
+          });
+
+          return {
+            updated: jobRow,
+            from: currentStatus,
+            effectiveTo: retryTarget,
+            effectiveMsg: retryMsg,
+            projectId: row.projectId,
+          };
+        }
+
         const isTerminal = TERMINAL_JOB_STATUSES.includes(to);
         const setStartedAt =
           to === JobStatus.RUNNING && row.startedAt === null ? now : undefined;
@@ -75,6 +147,9 @@ export class JobStateService {
           data: {
             ...patch,
             status: to,
+            ...(to === JobStatus.RUNNING || to === JobStatus.COMPLETED
+              ? { notBefore: null }
+              : {}),
             ...(setStartedAt ? { startedAt: setStartedAt } : {}),
             ...(setCompletedAt ? { completedAt: setCompletedAt } : {}),
           },
@@ -93,28 +168,27 @@ export class JobStateService {
         return {
           updated: jobRow,
           from: currentStatus,
+          effectiveTo: to,
+          effectiveMsg: message || `Transitioned ${currentStatus} -> ${to}`,
           projectId: row.projectId,
         };
-      },
-    );
-
-    const effectiveMessage = message || `Transitioned ${from} -> ${to}`;
+      });
 
     this.eventsPublisher.jobStatus({
       jobId,
       projectId,
       from,
-      to,
+      to: effectiveTo,
       at: now.toISOString(),
-      message: effectiveMessage,
+      message: effectiveMsg,
     });
 
-    if (to === JobStatus.FAILED) {
+    if (effectiveTo === JobStatus.FAILED) {
       this.eventsPublisher.failed({
         jobId,
         projectId,
         code: updated.errorCode || ErrorCode.PROVIDER_ERROR,
-        message: updated.errorMessage || effectiveMessage,
+        message: updated.errorMessage || effectiveMsg,
         retryable: opts?.retryable ?? true,
       });
     }

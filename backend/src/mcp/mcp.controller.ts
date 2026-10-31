@@ -54,7 +54,7 @@ export class McpController {
   }
 
   @Get('logs')
-  listLogs(): McpInvocationLogEntry[] {
+  async listLogs(): Promise<McpInvocationLogEntry[]> {
     return this.mcpTools.getLogs();
   }
 

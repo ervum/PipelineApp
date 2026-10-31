@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -16,6 +17,7 @@ import {
   McpToolDefinition,
 } from '@forge/shared';
 import { McpApi } from '../../../core/api/mcp.api';
+import { SocketService } from '../../../core/realtime/socket.service';
 import { StudioStateService } from '../../../core/state/studio-state.service';
 import { ToastService } from '../../../core/state/toast.service';
 import { ButtonComponent } from '../../../ui/button/button.component';
@@ -41,10 +43,12 @@ interface SchemaPropertyRow {
   styleUrl: './mcp-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class McpPageComponent implements OnInit {
+export class McpPageComponent implements OnInit, OnDestroy {
   private readonly mcpApi = inject(McpApi);
+  private readonly socket = inject(SocketService);
   private readonly studio = inject(StudioStateService);
   private readonly toast = inject(ToastService);
+  private unsubMcp: (() => void) | null = null;
 
   readonly toolName = input<string>();
 
@@ -162,6 +166,20 @@ export class McpPageComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    this.unsubMcp = this.socket.on('mcp:invocation', (ev) => {
+      this.logs.update((prev) => {
+        const filtered = prev.filter((item) => item.id !== ev.entry.id);
+        return [ev.entry, ...filtered].slice(0, 100);
+      });
+      this.status.update((st) =>
+        st
+          ? {
+              ...st,
+              totalInvocations: Math.max(st.totalInvocations, ev.totalInvocations),
+            }
+          : st,
+      );
+    });
     await this.refreshAll();
     const routeTool = this.toolName();
     if (routeTool && this.tools().some((t) => t.name === routeTool)) {
@@ -169,6 +187,11 @@ export class McpPageComponent implements OnInit {
     } else {
       this.populateDefaultArgs(this.selectedTool());
     }
+  }
+
+  ngOnDestroy(): void {
+    this.unsubMcp?.();
+    this.unsubMcp = null;
   }
 
   async refreshAll(): Promise<void> {

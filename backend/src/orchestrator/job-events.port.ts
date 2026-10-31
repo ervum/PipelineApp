@@ -4,6 +4,7 @@ import {
   JobFailedEvent,
   JobProgressEvent,
   JobStatusEvent,
+  McpInvocationEvent,
   MiddlemanChunkEvent,
   MiddlemanCompleteEvent,
   MiddlemanErrorEvent,
@@ -27,6 +28,7 @@ export interface JobEventsPublisherPort {
   failed(event: JobFailedEvent): void;
   vaultFileUpdated(event: VaultFileUpdatedEvent): void;
   providerHealth(event: ProviderHealthEvent): void;
+  mcpInvocation?(event: McpInvocationEvent): void;
 }
 
 @Injectable()
@@ -94,6 +96,12 @@ export class LoggingJobEventsPublisher implements JobEventsPublisherPort {
   providerHealth(event: ProviderHealthEvent): void {
     this.logger.debug(
       `[provider:health] provider=${event.providerConfigId} state=${event.state} latency=${event.latencyMs ?? 'n/a'}ms`,
+    );
+  }
+
+  mcpInvocation(event: McpInvocationEvent): void {
+    this.logger.debug(
+      `[mcp:invocation] tool=${event.entry.toolName} transport=${event.entry.transport} duration=${event.entry.durationMs}ms`,
     );
   }
 }

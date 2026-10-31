@@ -156,10 +156,8 @@ export class OutputIngestionService {
 
       const assetId = `ast_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
       const assetGroupId =
-        parentGroupId && groupIdx === 0
-          ? parentGroupId
-          : `grp_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
-      const version = parentGroupId && groupIdx === 0 ? nextGroupVersion : 1;
+        parentGroupId ?? `grp_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
+      const version = parentGroupId ? nextGroupVersion + groupIdx : 1;
 
       const primaryOut =
         groupOutputs.find((o) => o.role === AssetFileRole.PRIMARY) ??
@@ -479,7 +477,7 @@ export class OutputIngestionService {
         modality === Modality.OTHER &&
         subMode === GenerationSubMode.VFX_TEXTURE
       ) {
-        const [probe, thumb] = await Promise.all([
+        const [probe, thumb, seam] = await Promise.all([
           this.imageProc.probe(primaryBuf),
           this.imageProc.thumbnail(primaryBuf, 384),
           this.imageProc.makeTileable(primaryBuf),
@@ -488,6 +486,7 @@ export class OutputIngestionService {
           modality: 'OTHER',
           subMode: GenerationSubMode.VFX_TEXTURE,
           frameSize: probe.width,
+          tileSeamScore: seam.seamScore,
         };
 
         filesToStore.push({

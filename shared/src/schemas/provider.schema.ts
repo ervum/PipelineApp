@@ -41,6 +41,8 @@ export const ProviderSettingsSchema = z
     webAuthMode: z.enum(['gemini_guest', 'gemini_auth', 'aistudio']).optional(),
     browserHeadless: z.boolean().default(true),
     autoDeleteCreatedChats: z.boolean().default(false),
+    autoRetry: z.boolean().default(true),
+    maxAttempts: z.number().int().min(1).max(10).default(3),
   })
   .partial();
 

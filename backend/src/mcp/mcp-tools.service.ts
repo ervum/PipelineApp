@@ -26,12 +26,16 @@ import {
   ProviderKind,
   TERMINAL_JOB_STATUSES,
 } from '@forge/shared';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { AssetsService } from '../assets/assets.service';
 import { DomainError } from '../common/errors/domain.error';
 import { sleep } from '../common/utils/sleep';
 import { JobsService } from '../generators/jobs.service';
 import { MiddlemanCompilerService } from '../middleman/middleman-compiler.service';
+import {
+  JOB_EVENTS_PUBLISHER,
+  JobEventsPublisherPort,
+} from '../orchestrator/job-events.port';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectsService } from '../projects-vault/projects.service';
 import { VaultFilesService } from '../projects-vault/vault-files.service';
@@ -40,6 +44,7 @@ import { ProvidersService } from '../providers/providers.service';
 import { StorageService } from '../storage/storage.service';
 
 const MAX_LOG_ENTRIES = 100;
+const MAX_DB_LOG_ROWS = 1000;
 
 @Injectable()
 export class McpToolsService {
@@ -56,6 +61,9 @@ export class McpToolsService {
     private readonly middlemanCompiler: MiddlemanCompilerService,
     private readonly providersService: ProvidersService,
     private readonly storage: StorageService,
+    @Optional()
+    @Inject(JOB_EVENTS_PUBLISHER)
+    private readonly events?: JobEventsPublisherPort,
   ) {}
 
   getTools(): McpToolDefinition[] {
@@ -1173,8 +1181,12 @@ export class McpToolsService {
   }
 
   async getStatus(baseUrl = 'http://localhost:3333'): Promise<McpServerStatusModel> {
-    const tools = this.getTools();
-    const resources = await this.listResources();
+    const [tools, resources, recentLogs, dbCount] = await Promise.all([
+      Promise.resolve(this.getTools()),
+      this.listResources(),
+      this.getLogs(),
+      this.getTotalInvocations(),
+    ]);
     const prompts = this.listPrompts();
     const cleanBase = baseUrl.replace(/\/$/, '');
 
@@ -1189,7 +1201,7 @@ export class McpToolsService {
       toolCount: tools.length,
       resourceCount: resources.length,
       promptCount: prompts.length,
-      totalInvocations: this.totalInvocations,
+      totalInvocations: dbCount,
       hardwareProfile: {
         systemRamGb: 32,
         ramType: 'DDR5',
@@ -1198,12 +1210,59 @@ export class McpToolsService {
         notes:
           '32GB DDR5 System RAM shared-memory offload active as automatic fallback when GPU VRAM reaches capacity.',
       },
-      recentLogs: [...this.logs],
+      recentLogs,
     };
   }
 
-  getLogs(): McpInvocationLogEntry[] {
+  async getLogs(): Promise<McpInvocationLogEntry[]> {
+    if (this.prisma.mcpInvocationLog?.findMany) {
+      try {
+        const rows = await this.prisma.mcpInvocationLog.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: MAX_LOG_ENTRIES,
+        });
+        return rows.map((r) => ({
+          id: r.id,
+          timestamp: r.createdAt.toISOString(),
+          toolName: r.toolName,
+          transport: (r.transport as 'HTTP_RPC' | 'STDIO' | 'PLAYGROUND') ?? 'HTTP_RPC',
+          durationMs: r.durationMs,
+          isError: r.isError,
+          argsSummary: r.argsSummary,
+          assetIds: r.assetIds,
+          primaryAssetUrl: r.primaryAssetUrl,
+          primaryModality: (r.primaryModality as Modality | null) ?? null,
+          errorMessage: r.errorMessage,
+        }));
+      } catch {
+        // Fall through to in-memory cache
+      }
+    }
     return [...this.logs];
+  }
+
+  private async getTotalInvocations(): Promise<number> {
+    if (this.prisma.mcpInvocationLog?.count) {
+      try {
+        const count = await this.prisma.mcpInvocationLog.count();
+        return Math.max(count, this.totalInvocations);
+      } catch {
+        // Fall through
+      }
+    }
+    return this.totalInvocations;
+  }
+
+  private sanitizeArgsForSummary(rawArgs: Record<string, unknown>): string {
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawArgs)) {
+      if (typeof v === 'string' && v.length > 200) {
+        cleaned[k] = `${v.slice(0, 80)}…[${v.length} chars]`;
+      } else {
+        cleaned[k] = v;
+      }
+    }
+    return JSON.stringify(cleaned).slice(0, 180);
   }
 
   async callTool(
@@ -1214,6 +1273,7 @@ export class McpToolsService {
     const startedMs = Date.now();
     this.totalInvocations += 1;
     const logId = `mcp_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+    const argsSummary = this.sanitizeArgsForSummary(rawArgs);
 
     try {
       const result = await this.dispatchTool(toolName, rawArgs);
@@ -1230,14 +1290,14 @@ export class McpToolsService {
           ? (structured['modality'] as Modality)
           : null;
 
-      this.recordLog({
+      await this.recordLog({
         id: logId,
         timestamp: new Date().toISOString(),
         toolName,
         transport,
         durationMs,
         isError: Boolean(result.isError),
-        argsSummary: JSON.stringify(rawArgs).slice(0, 180),
+        argsSummary,
         assetIds,
         primaryAssetUrl,
         primaryModality,
@@ -1249,14 +1309,14 @@ export class McpToolsService {
       const durationMs = Math.max(1, Date.now() - startedMs);
       const message = err instanceof Error ? err.message : String(err);
 
-      this.recordLog({
+      await this.recordLog({
         id: logId,
         timestamp: new Date().toISOString(),
         toolName,
         transport,
         durationMs,
         isError: true,
-        argsSummary: JSON.stringify(rawArgs).slice(0, 180),
+        argsSummary,
         assetIds: [],
         primaryAssetUrl: null,
         primaryModality: null,
@@ -1275,10 +1335,63 @@ export class McpToolsService {
     }
   }
 
-  private recordLog(entry: McpInvocationLogEntry): void {
+  private async recordLog(entry: McpInvocationLogEntry): Promise<void> {
     this.logs.unshift(entry);
     if (this.logs.length > MAX_LOG_ENTRIES) {
       this.logs.length = MAX_LOG_ENTRIES;
+    }
+
+    if (this.prisma.mcpInvocationLog?.create) {
+      try {
+        await this.prisma.mcpInvocationLog.create({
+          data: {
+            id: entry.id,
+            toolName: entry.toolName,
+            transport: entry.transport,
+            durationMs: entry.durationMs,
+            isError: entry.isError,
+            argsSummary: entry.argsSummary,
+            assetIds: entry.assetIds,
+            primaryAssetUrl: entry.primaryAssetUrl,
+            primaryModality: entry.primaryModality,
+            errorMessage: entry.errorMessage,
+            createdAt: new Date(entry.timestamp),
+          },
+        });
+
+        // Prune older entries beyond MAX_DB_LOG_ROWS asynchronously
+        void this.pruneOldDbLogs();
+      } catch {
+        // Keep in-memory entry on DB error
+      }
+    }
+
+    const total = await this.getTotalInvocations();
+    this.events?.mcpInvocation?.({
+      entry,
+      totalInvocations: total,
+    });
+  }
+
+  private async pruneOldDbLogs(): Promise<void> {
+    if (!this.prisma.mcpInvocationLog?.findMany || !this.prisma.mcpInvocationLog?.deleteMany) {
+      return;
+    }
+    try {
+      const boundary = await this.prisma.mcpInvocationLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: MAX_DB_LOG_ROWS,
+        take: 1,
+        select: { createdAt: true },
+      });
+      const cutoff = boundary[0]?.createdAt;
+      if (cutoff) {
+        await this.prisma.mcpInvocationLog.deleteMany({
+          where: { createdAt: { lte: cutoff } },
+        });
+      }
+    } catch {
+      // Ignore pruning errors
     }
   }
 
