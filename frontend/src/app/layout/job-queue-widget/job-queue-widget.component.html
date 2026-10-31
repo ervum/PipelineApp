@@ -1,0 +1,47 @@
+<div class="queue-widget">
+  <div class="queue-widget__header">
+    <span class="fs-label">JOB QUEUE</span>
+    <div class="queue-widget__chips">
+      @if (summary().compiling > 0) {
+        <span class="summary-chip summary-chip--cyan">{{ summary().compiling }} comp</span>
+      }
+      @if (summary().coldStarts > 0) {
+        <span class="summary-chip summary-chip--amber">{{ summary().coldStarts }} cold</span>
+      }
+      @if (summary().running > 0) {
+        <span class="summary-chip summary-chip--emerald">{{ summary().running }} run</span>
+      }
+      @if (summary().awaitingReview > 0) {
+        <span class="summary-chip summary-chip--review">{{ summary().awaitingReview }} rev</span>
+      }
+    </div>
+  </div>
+
+  <div class="queue-widget__list">
+    @for (job of visibleJobs(); track job.id) {
+      <div class="queue-row fs-anim-slide-up" role="button" tabindex="0" (click)="openJob(job)" (keydown.enter)="openJob(job)">
+        <div class="queue-row__top">
+          <fs-icon [name]="modalityIcon(job)" [size]="14" />
+          <span class="queue-row__title">{{ titleFor(job) }}</span>
+          <span class="queue-row__elapsed fs-num">{{ elapsedFor(job) }}</span>
+          <button
+            type="button"
+            class="queue-row__cancel"
+            title="Cancel job"
+            aria-label="Cancel job"
+            (click)="cancelJob(job, $event)"
+          >
+            <fs-icon name="x" [size]="12" />
+          </button>
+        </div>
+        <div class="queue-row__meta">
+          <fs-tier-badge [tier]="job.tier" />
+          <fs-status-pill [status]="job.status" />
+        </div>
+        <fs-progress [value]="progressValue(job)" [accent]="progressAccent(job)" />
+      </div>
+    } @empty {
+      <div class="queue-widget__empty">No active jobs</div>
+    }
+  </div>
+</div>

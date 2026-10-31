@@ -1,0 +1,50 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.vision-panel {
+  padding-top: space(3);
+  @include hairline('top');
+}
+
+.vision-error {
+  padding: space(2);
+  border-radius: radius('sm');
+  @include tinted('coral');
+  @include text('xs', 'regular', 'snug');
+}
+
+.palette-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: space('1.5');
+}
+
+.palette-swatch {
+  @include interactive-reset;
+  display: inline-flex;
+  align-items: flex-end;
+  width: 52px;
+  height: 32px;
+  padding: 2px 4px;
+  border-radius: radius('xs');
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  span {
+    @include mono('2xs');
+    font-size: 9px;
+    background: rgba(9, 10, 15, 0.78);
+    color: text-c('primary');
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+}
+
+.reanalyze-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: space(2);
+  align-items: center;
+}

@@ -1,0 +1,294 @@
+<section class="compile-review-drawer" aria-label="Middleman Compile Review">
+  <header class="crd-header">
+    <div class="crd-title-group">
+      <span class="crd-badge">
+        <fs-icon name="sparkles" [size]="14" />
+        <span>INTERCEPT &amp; REVIEW</span>
+      </span>
+      <input
+        type="text"
+        class="crd-title-input"
+        aria-label="Compiled asset title"
+        [ngModel]="draft().assetTitle"
+        (ngModelChange)="patchDraft({ assetTitle: $event })"
+      />
+      @if (isDirty()) {
+        <span class="dirty-pill">Edited</span>
+      }
+    </div>
+
+    <div class="crd-header-right">
+      @if (job().middlemanProfileName) {
+        <span class="profile-chip mono">{{ job().middlemanProfileName }}</span>
+      }
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        icon="x"
+        aria-label="Close review drawer"
+        (click)="closed.emit()"
+      ></button>
+    </div>
+  </header>
+
+  <nav class="crd-tabs" role="tablist">
+    <button
+      type="button"
+      class="crd-tab"
+      role="tab"
+      [class.is-active]="activeTab() === 'DIFF'"
+      (click)="setTab('DIFF')"
+    >
+      Diff
+    </button>
+    <button
+      type="button"
+      class="crd-tab"
+      role="tab"
+      [class.is-active]="activeTab() === 'ENHANCED'"
+      (click)="setTab('ENHANCED')"
+    >
+      Enhanced
+    </button>
+    <button
+      type="button"
+      class="crd-tab"
+      role="tab"
+      [class.is-active]="activeTab() === 'NEGATIVE'"
+      (click)="setTab('NEGATIVE')"
+    >
+      Negative
+    </button>
+    <button
+      type="button"
+      class="crd-tab"
+      role="tab"
+      [class.is-active]="activeTab() === 'PARAMS'"
+      (click)="setTab('PARAMS')"
+    >
+      Params ({{ paramEntries().length }})
+    </button>
+    <button
+      type="button"
+      class="crd-tab"
+      role="tab"
+      [class.is-active]="activeTab() === 'SOURCES'"
+      (click)="setTab('SOURCES')"
+    >
+      Context Sources ({{ job().contextFiles.length || draft().contextSourcesUsed.length }})
+    </button>
+    <button
+      type="button"
+      class="crd-tab"
+      role="tab"
+      [class.is-active]="activeTab() === 'RAW'"
+      (click)="setTab('RAW')"
+    >
+      Raw
+    </button>
+  </nav>
+
+  <div class="crd-body">
+    @switch (activeTab()) {
+      @case ('DIFF') {
+        <fs-prompt-diff [before]="job().rawPrompt" [after]="draft().enhancedPrompt" />
+      }
+
+      @case ('ENHANCED') {
+        <div class="editor-pane">
+          <div class="editor-meta">
+            <span class="fs-label">Enhanced Prompt (sent to {{ job().providerName }})</span>
+            <span
+              class="char-counter mono"
+              [class.is-over]="draft().enhancedPrompt.length > maxPromptChars()"
+            >
+              {{ draft().enhancedPrompt.length }} / {{ maxPromptChars() }} chars
+            </span>
+          </div>
+          <textarea
+            class="fs-textarea prompt-textarea"
+            rows="6"
+            [ngModel]="draft().enhancedPrompt"
+            (ngModelChange)="patchDraft({ enhancedPrompt: $event })"
+          ></textarea>
+        </div>
+      }
+
+      @case ('NEGATIVE') {
+        <div class="editor-pane">
+          <div class="editor-meta">
+            <span class="fs-label">Negative Prompt / Constraints</span>
+            <span class="char-counter mono">{{ draft().negativePrompt.length }} / 2000 chars</span>
+          </div>
+          <textarea
+            class="fs-textarea prompt-textarea"
+            rows="5"
+            placeholder="Elements to avoid during generation..."
+            [ngModel]="draft().negativePrompt"
+            (ngModelChange)="patchDraft({ negativePrompt: $event })"
+          ></textarea>
+        </div>
+      }
+
+      @case ('PARAMS') {
+        @if (paramEntries().length === 0) {
+          <div class="empty-params">No recommended parameter overrides from Middleman.</div>
+        } @else {
+          <div class="params-grid">
+            @for (entry of paramEntries(); track entry.key) {
+              <div class="param-card">
+                <div class="param-head">
+                  <span class="param-label">{{ entry.spec?.label ?? entry.key }}</span>
+                  <span class="param-key mono">{{ entry.key }}</span>
+                </div>
+
+                @if (entry.spec; as spec) {
+                  @switch (spec.type) {
+                    @case ('boolean') {
+                      <fs-toggle
+                        [label]="spec.label"
+                        [checked]="asBool(entry.value)"
+                        (checkedChange)="patchRecommendedParam(entry.key, $event)"
+                      />
+                    }
+                    @case ('enum') {
+                      <fs-select
+                        [options]="enumOptions(spec)"
+                        [value]="asString(entry.value)"
+                        (valueChange)="$event && patchRecommendedParam(entry.key, $event)"
+                      />
+                    }
+                    @case ('number') {
+                      <input
+                        type="number"
+                        class="fs-input mono"
+                        [min]="spec.min ?? null"
+                        [max]="spec.max ?? null"
+                        [step]="spec.step ?? 0.1"
+                        [ngModel]="asNumber(entry.value)"
+                        (ngModelChange)="patchRecommendedParam(entry.key, +$event)"
+                      />
+                    }
+                    @case ('integer') {
+                      <input
+                        type="number"
+                        class="fs-input mono"
+                        [min]="spec.min ?? null"
+                        [max]="spec.max ?? null"
+                        [step]="spec.step ?? 1"
+                        [ngModel]="asNumber(entry.value)"
+                        (ngModelChange)="patchRecommendedParam(entry.key, +$event)"
+                      />
+                    }
+                    @default {
+                      <input
+                        type="text"
+                        class="fs-input"
+                        [ngModel]="asString(entry.value)"
+                        (ngModelChange)="patchRecommendedParam(entry.key, $event)"
+                      />
+                    }
+                  }
+                } @else {
+                  <input
+                    type="text"
+                    class="fs-input mono"
+                    readonly
+                    [value]="asString(entry.value)"
+                  />
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+
+      @case ('SOURCES') {
+        <fs-context-sources-list
+          [contextFiles]="job().contextFiles"
+          [usedSources]="draft().contextSourcesUsed"
+        />
+      }
+
+      @case ('RAW') {
+        <fs-code-view [code]="rawStreamText()" language="JSON" />
+      }
+    }
+  </div>
+
+  <footer class="crd-footer">
+    <div class="crd-warnings">
+      @for (warn of draft().warnings; track warn) {
+        <span class="warning-chip">
+          <fs-icon name="alert-triangle" [size]="13" />
+          <span>{{ warn }}</span>
+        </span>
+      }
+    </div>
+
+    <div class="crd-actions">
+      <div class="recompile-wrap">
+        <button
+          fsBtn
+          variant="secondary"
+          size="sm"
+          icon="refresh"
+          [disabled]="busy()"
+          (click)="recompileOpen.set(!recompileOpen())"
+        >
+          Recompile
+        </button>
+
+        @if (recompileOpen()) {
+          <div class="recompile-popover">
+            <label class="fs-label">Adjust Raw Prompt &amp; Re-run Middleman</label>
+            <textarea
+              class="fs-textarea"
+              rows="3"
+              [ngModel]="recompilePrompt()"
+              (ngModelChange)="recompilePrompt.set($event)"
+            ></textarea>
+            <div class="popover-actions">
+              <button fsBtn variant="ghost" size="sm" (click)="recompileOpen.set(false)">
+                Cancel
+              </button>
+              <button
+                fsBtn
+                variant="ai"
+                size="sm"
+                icon="sparkles"
+                [loading]="busy()"
+                (click)="runRecompile()"
+              >
+                Recompile Now
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <button
+        fsBtn
+        variant="danger"
+        size="sm"
+        icon="trash"
+        [disabled]="busy()"
+        (click)="discardJob()"
+      >
+        Discard
+      </button>
+
+      <button
+        fsBtn
+        variant="primary"
+        size="sm"
+        icon="play"
+        [loading]="busy()"
+        (click)="dispatchJob()"
+      >
+        Dispatch to Generator
+      </button>
+    </div>
+  </footer>
+</section>

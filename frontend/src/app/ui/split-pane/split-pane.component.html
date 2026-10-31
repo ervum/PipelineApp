@@ -1,0 +1,17 @@
+<div class="split-pane__left">
+  <ng-content select="[paneLeft]" />
+</div>
+<div
+  class="split-handle"
+  [class.is-dragging]="isDragging()"
+  role="separator"
+  aria-orientation="vertical"
+  tabindex="0"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+></div>
+<div class="split-pane__right">
+  <ng-content select="[paneRight]" />
+</div>

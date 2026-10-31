@@ -1,0 +1,14 @@
+@use 'sass:map';
+@use 'tokens' as t;
+
+:root {
+  @each $k, $val in t.$surface { --fs-surface-#{$k}: #{$val}; }
+  @each $k, $val in t.$border  { --fs-border-#{$k}: #{$val}; }
+  @each $k, $val in t.$text    { --fs-text-#{$k}: #{$val}; }
+  @each $k, $val in t.$accent  { --fs-accent-#{$k}: #{$val}; }
+  --fs-project-accent: #{map.get(t.$accent, 'violet')}; // StudioStateService effect() overwrites on project switch
+  --fs-sidebar-width: #{map.get(t.$layout, 'sidebar-width')};
+  --fs-context-bar-height: #{map.get(t.$layout, 'context-bar-height')};
+  --fs-history-width: #{map.get(t.$layout, 'history-drawer-width')};
+  color-scheme: dark;
+}

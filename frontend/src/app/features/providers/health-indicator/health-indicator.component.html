@@ -1,0 +1,50 @@
+<div class="health-box fs-stack">
+  <div class="fs-spread">
+    <div class="fs-cluster">
+      <fs-status-pill [status]="provider().health.state" />
+      @if (provider().health.latencyMs !== null) {
+        <span class="fs-mono fs-small">{{ provider().health.latencyMs }} ms</span>
+      }
+      <span class="fs-micro">
+        Checked {{ formatRelativeTime(provider().health.checkedAt) }}
+      </span>
+    </div>
+
+    <button
+      type="button"
+      fsBtn
+      variant="secondary"
+      size="sm"
+      [loading]="checking()"
+      (click)="runCheck()"
+    >
+      <fs-icon name="refresh" [size]="14" />
+      <span>Run Check</span>
+    </button>
+  </div>
+
+  @if (provider().health.message) {
+    <div class="health-msg fs-mono">{{ provider().health.message }}</div>
+  }
+
+  @if (provider().kind === 'RUNPOD_SERVERLESS' && workerStats(); as ws) {
+    <div class="worker-grid">
+      <div class="worker-stat">
+        <span class="fs-label">Idle</span>
+        <span class="fs-h3 fs-num fs-text-emerald">{{ ws.idle }}</span>
+      </div>
+      <div class="worker-stat">
+        <span class="fs-label">Running</span>
+        <span class="fs-h3 fs-num fs-text-cyan">{{ ws.running }}</span>
+      </div>
+      <div class="worker-stat">
+        <span class="fs-label">Initializing</span>
+        <span class="fs-h3 fs-num fs-text-amber">{{ ws.initializing }}</span>
+      </div>
+      <div class="worker-stat">
+        <span class="fs-label">Throttled</span>
+        <span class="fs-h3 fs-num fs-text-coral">{{ ws.throttled }}</span>
+      </div>
+    </div>
+  }
+</div>

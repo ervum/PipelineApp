@@ -1,0 +1,16 @@
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { IconComponent } from '../icon/icon.component';
+
+@Component({
+  selector: 'fs-empty-state',
+  standalone: true,
+  imports: [IconComponent],
+  templateUrl: './empty-state.component.html',
+  styleUrl: './empty-state.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class EmptyStateComponent {
+  readonly icon = input<string>('sparkles');
+  readonly title = input.required<string>();
+  readonly message = input<string>('');
+}

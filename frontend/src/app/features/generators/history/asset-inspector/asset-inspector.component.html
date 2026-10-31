@@ -1,0 +1,281 @@
+@let a = asset();
+<section class="asset-inspector" aria-label="Asset Inspector">
+  <header class="inspector-header">
+    <div class="title-wrap">
+      <input
+        type="text"
+        class="title-input"
+        aria-label="Asset title"
+        [ngModel]="titleDraft()"
+        (ngModelChange)="titleDraft.set($event)"
+        (blur)="commitTitle()"
+        (keydown.enter)="commitTitle()"
+      />
+      <span class="version-badge mono">v{{ a.version }}</span>
+    </div>
+    <button
+      fsBtn
+      variant="ghost"
+      size="sm"
+      icon="x"
+      aria-label="Close inspector"
+      (click)="closed.emit()"
+    ></button>
+  </header>
+
+  <div class="inspector-body">
+    <div class="inspector-block">
+      <label class="fs-label">Approval Status</label>
+      <fs-segmented
+        [options]="approvalOptions"
+        [value]="a.approval"
+        (valueChange)="onApprovalChange($event)"
+      />
+    </div>
+
+    <div class="inspector-block">
+      <label class="fs-label">Tags</label>
+      <fs-chip-input
+        [values]="a.tags"
+        placeholder="Add asset tag..."
+        (valuesChange)="onTagsChange($event)"
+      />
+    </div>
+
+    <div class="inspector-block">
+      <label class="fs-label">Review Notes</label>
+      <textarea
+        class="fs-textarea"
+        rows="2"
+        placeholder="Production notes, polish items..."
+        [ngModel]="notesDraft()"
+        (ngModelChange)="notesDraft.set($event)"
+        (blur)="commitNotes()"
+      ></textarea>
+    </div>
+
+    <div class="inspector-block">
+      <label class="fs-label">Prompt Diff (Raw → Enhanced)</label>
+      <fs-prompt-diff [before]="a.rawPrompt" [after]="a.enhancedPrompt" mode="split" />
+
+      @if (a.negativePrompt) {
+        <div class="neg-box">
+          <span class="neg-label">Negative Prompt</span>
+          <p class="neg-text mono">{{ a.negativePrompt }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="inspector-block">
+      <label class="fs-label">Provenance &amp; Telemetry</label>
+      <dl class="fs-kv">
+        <dt>Provider</dt>
+        <dd>{{ a.providerName || a.providerKind }}</dd>
+
+        <dt>Model</dt>
+        <dd class="mono">{{ a.providerModel || 'Default' }}</dd>
+
+        <dt>Execution Tier</dt>
+        <dd><fs-tier-badge [tier]="a.tier" /></dd>
+
+        <dt>Seed</dt>
+        <dd class="seed-dd mono">
+          <span>{{ a.seed ?? 'Random' }}</span>
+          @if (a.seed !== null) {
+            <button type="button" class="copy-seed-btn" (click)="copySeed()">
+              <fs-icon name="copy" [size]="12" />
+            </button>
+          }
+        </dd>
+
+        <dt>Cost</dt>
+        <dd class="mono">${{ (a.costUsd ?? 0).toFixed(4) }}</dd>
+
+        <dt>Duration</dt>
+        <dd class="mono">{{ ((a.executionMs ?? 0) / 1000).toFixed(1) }} s</dd>
+
+        @if (sourceJob()?.coldStartMs; as coldMs) {
+          <dt>Cold Start</dt>
+          <dd class="mono">{{ (coldMs / 1000).toFixed(1) }} s</dd>
+        }
+
+        <dt>Created</dt>
+        <dd class="mono">{{ a.createdAt.slice(0, 19).replace('T', ' ') }}</dd>
+      </dl>
+    </div>
+
+    @if (sourceJob(); as job) {
+      <div class="inspector-block">
+        <label class="fs-label">Context Sources Used</label>
+        <fs-context-sources-list
+          [contextFiles]="job.contextFiles"
+          [usedSources]="(job.edited ?? job.compiled)?.contextSourcesUsed ?? []"
+        />
+      </div>
+    }
+
+    @if (lineageAssets().length > 1) {
+      <div class="inspector-block">
+        <label class="fs-label">Version Lineage ({{ lineageAssets().length }})</label>
+        <div class="lineage-list">
+          @for (ver of lineageAssets(); track ver.id) {
+            <button
+              type="button"
+              class="lineage-chip"
+              [class.is-current]="ver.id === a.id"
+              (click)="selectLineageVersion(ver)"
+            >
+              <span class="mono">v{{ ver.version }}</span>
+              <span>{{ ver.title }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="inspector-block">
+      <div class="files-head">
+        <label class="fs-label">Stored Files ({{ a.files.length }})</label>
+        @if (a.files.length > 1) {
+          <button fsBtn variant="ghost" size="sm" icon="download" (click)="exportAllFiles()">
+            Download All
+          </button>
+        }
+      </div>
+      <div class="files-list">
+        @for (file of a.files; track file.id) {
+          <div class="file-row">
+            <div class="file-info">
+              <span class="file-role mono">{{ file.role }}</span>
+              <span class="file-name">{{ file.fileName }}</span>
+            </div>
+            <div class="file-right">
+              <span class="file-size mono">{{ formatBytes(file.sizeBytes) }}</span>
+              <button
+                type="button"
+                class="dl-file-btn"
+                aria-label="Download file"
+                (click)="downloadFile(file)"
+              >
+                <fs-icon name="download" [size]="13" />
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="inspector-actions">
+      <button fsBtn variant="primary" size="sm" icon="download" (click)="exportPrimary()">
+        Export Primary
+      </button>
+
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="folder"
+        (click)="openSaveToVaultModal()"
+      >
+        Save as Reference to Project Vault
+      </button>
+
+      <div class="actions-grid-2">
+        <button
+          fsBtn
+          variant="secondary"
+          size="sm"
+          icon="sparkles"
+          [loading]="busyVariation()"
+          (click)="createVariation('AUTO_FIRE')"
+        >
+          Variation (Auto)
+        </button>
+        <button
+          fsBtn
+          variant="secondary"
+          size="sm"
+          icon="eye"
+          [loading]="busyVariation()"
+          (click)="createVariation('INTERCEPT')"
+        >
+          Variation (Review)
+        </button>
+      </div>
+
+      <div class="actions-grid-2">
+        <button
+          fsBtn
+          variant="secondary"
+          size="sm"
+          icon="refresh"
+          (click)="triggerReRunWithEdits()"
+        >
+          Re-run with Edits
+        </button>
+        <button fsBtn variant="danger" size="sm" icon="trash" (click)="deleteAsset()">
+          Delete Asset
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<fs-modal
+  [open]="saveModalOpen()"
+  title="Save Asset as Reference to Project Vault"
+  size="md"
+  (openChange)="saveModalOpen.set($event)"
+>
+  <div class="save-vault-modal">
+    <div class="fs-field">
+      <label class="fs-label">Destination Vault Folder</label>
+      <fs-select
+        [options]="folderOptions()"
+        [value]="selectedFolderId()"
+        (valueChange)="selectedFolderId.set($event)"
+      />
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-label">Context Scopes</label>
+      <div class="scope-chips-grid">
+        @for (scope of allScopes; track scope) {
+          <button
+            type="button"
+            class="scope-chip"
+            [class.is-active]="selectedScopes().includes(scope)"
+            (click)="toggleScope(scope)"
+          >
+            {{ scopeLabels[scope] }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="fs-field">
+      <fs-toggle
+        label="Run Vision Style Descriptor Analysis Automatically"
+        [checked]="runVision()"
+        (checkedChange)="runVision.set($event)"
+      />
+    </div>
+
+    <div class="modal-footer">
+      <button fsBtn variant="ghost" size="sm" (click)="saveModalOpen.set(false)">
+        Cancel
+      </button>
+      <button
+        fsBtn
+        variant="primary"
+        size="sm"
+        icon="check"
+        [loading]="savingToVault()"
+        [disabled]="!selectedFolderId()"
+        (click)="confirmSaveToVault()"
+      >
+        Save to Vault
+      </button>
+    </div>
+  </div>
+</fs-modal>

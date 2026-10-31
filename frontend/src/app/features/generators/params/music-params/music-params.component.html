@@ -1,0 +1,126 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Track Type</label>
+    <fs-select
+      [options]="trackTypeOptions"
+      [value]="params().trackType"
+      (valueChange)="$event && patch({ trackType: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <fs-slider
+      label="Duration"
+      [min]="5"
+      [max]="300"
+      [step]="5"
+      [value]="params().durationSec"
+      [format]="formatDuration"
+      (valueChange)="patch({ durationSec: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <div class="bpm-label-row">
+        <label class="fs-label">Tempo (BPM)</label>
+        <fs-toggle
+          label="Auto"
+          [checked]="isBpmAuto()"
+          (checkedChange)="onBpmAutoToggle($event)"
+        />
+      </div>
+      <div class="bpm-controls">
+        <input
+          type="number"
+          class="fs-input mono"
+          min="40"
+          max="220"
+          [disabled]="isBpmAuto()"
+          [placeholder]="isBpmAuto() ? 'Auto' : '120'"
+          [ngModel]="params().bpm ?? ''"
+          (ngModelChange)="onBpmInput(+$event)"
+        />
+        <button
+          fsBtn
+          variant="secondary"
+          size="sm"
+          (click)="tapTempo()"
+        >
+          Tap
+        </button>
+      </div>
+      @if (errors()['bpm']; as err) {
+        <span class="fs-field__error">{{ err }}</span>
+      }
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-label">Key Signature</label>
+      <fs-select
+        [options]="keyOptions"
+        [searchable]="true"
+        [value]="selectedKeyOption()"
+        (valueChange)="onKeyChange($event)"
+      />
+    </div>
+  </div>
+
+  <div class="toggles-group">
+    <fs-toggle
+      label="Seamless Loop Boundary"
+      [checked]="params().seamlessLoop"
+      (checkedChange)="patch({ seamlessLoop: $event })"
+    />
+    <fs-toggle
+      label="Instrumental Only (No Vocals)"
+      [checked]="params().instrumentalOnly"
+      (checkedChange)="patch({ instrumentalOnly: $event })"
+    />
+    <fs-toggle
+      label="Generate Separated Stems (Drums / Bass / Lead / Pad)"
+      [checked]="params().generateStems"
+      (checkedChange)="patch({ generateStems: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Output Format</label>
+    <fs-segmented
+      [options]="formatOptions"
+      [value]="params().outputFormat"
+      (valueChange)="patch({ outputFormat: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

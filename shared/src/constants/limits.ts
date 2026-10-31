@@ -1,0 +1,9 @@
+export const SEED_MAX = 2_147_483_647;
+export const MAX_RAW_PROMPT_CHARS = 4000;
+export const MAX_ENHANCED_PROMPT_CHARS = 8000;
+export const MAX_NEGATIVE_PROMPT_CHARS = 2000;
+export const MAX_PINNED_FILES = 12;
+export const DEFAULT_CONTEXT_TOKEN_BUDGET = 12_000;
+export const ICON_PREVIEW_SIZES = [512, 128, 64, 32] as const;
+export const SFX_DURATION_RANGE = { min: 0.5, max: 22 } as const;
+export const MUSIC_DURATION_RANGE = { min: 5, max: 300 } as const;

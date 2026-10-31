@@ -1,0 +1,106 @@
+<div class="ref-slot">
+  <div class="ref-header">
+    <span class="fs-label">
+      {{ label() }}
+      @if (required()) {
+        <span class="req-star">*</span>
+      }
+    </span>
+    <div class="ref-actions">
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        icon="database"
+        (click)="vaultPickerOpen.set(true)"
+      >
+        Pick from Vault
+      </button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        icon="history"
+        (click)="historyPickerOpen.set(true)"
+      >
+        Use History Asset
+      </button>
+    </div>
+  </div>
+
+  @if (storageKey()) {
+    <div class="ref-preview fs-card">
+      <div class="ref-thumb">
+        @if (previewUrl()) {
+          <img [src]="previewUrl()!" alt="Reference preview" />
+        } @else {
+          <fs-icon name="image" [size]="24" />
+        }
+      </div>
+      <div class="ref-info">
+        <span class="ref-name">{{ previewLabel() || storageKey() }}</span>
+        <span class="ref-key mono">{{ storageKey() }}</span>
+      </div>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        icon="x"
+        aria-label="Remove reference image"
+        (click)="clearReference()"
+      ></button>
+    </div>
+  } @else {
+    <fs-dropzone
+      accept="image/png,image/jpeg,image/webp"
+      [multiple]="false"
+      (files)="onFilesDropped($event)"
+    />
+  }
+
+  @if (uploading()) {
+    <span class="ref-uploading mono">Uploading reference image…</span>
+  }
+
+  @if (error(); as err) {
+    <span class="fs-field__error">{{ err }}</span>
+  }
+
+  <fs-modal [(open)]="vaultPickerOpen" size="md" title="Pick Reference Image from Vault">
+    <div class="picker-grid">
+      @for (img of vaultImages(); track img.id) {
+        <button
+          type="button"
+          class="picker-tile fs-card fs-card--interactive"
+          (click)="pickVaultImage(img)"
+        >
+          @if (img.thumbnailUrl || img.contentUrl) {
+            <img [src]="img.thumbnailUrl ?? img.contentUrl!" [alt]="img.name" />
+          }
+          <span class="picker-tile__name">{{ img.name }}</span>
+        </button>
+      } @empty {
+        <p class="picker-empty">No image files found in the active project vault.</p>
+      }
+    </div>
+  </fs-modal>
+
+  <fs-modal [(open)]="historyPickerOpen" size="md" title="Pick Reference from Asset History">
+    <div class="picker-grid">
+      @for (asset of historyImages(); track asset.id) {
+        <button
+          type="button"
+          class="picker-tile fs-card fs-card--interactive"
+          (click)="pickHistoryAsset(asset)"
+        >
+          @if (asset.thumbnailUrl || asset.primaryUrl) {
+            <img [src]="asset.thumbnailUrl ?? asset.primaryUrl" [alt]="asset.title" />
+          }
+          <span class="picker-tile__name">{{ asset.title }}</span>
+        </button>
+      } @empty {
+        <p class="picker-empty">No image assets available in history yet.</p>
+      }
+    </div>
+  </fs-modal>
+</div>

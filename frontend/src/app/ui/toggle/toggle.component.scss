@@ -1,0 +1,57 @@
+@use 'styles' as *;
+
+:host {
+  display: inline-flex;
+}
+
+.toggle-btn {
+  @include interactive-reset;
+  @include focus-ring;
+  @include disabled;
+  display: inline-flex;
+  align-items: center;
+  gap: space(2);
+  border-radius: radius('pill');
+}
+
+.toggle-track {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border-radius: radius('pill');
+  background: surface('sunken');
+  border: 1px solid border-c('default');
+  transition:
+    background dur('fast') ease('standard'),
+    border-color dur('fast') ease('standard');
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: text-c('secondary');
+  transition:
+    transform dur('fast') ease('emphasized'),
+    background dur('fast') ease('standard');
+}
+
+.toggle-btn.is-checked {
+  .toggle-track {
+    background: accent-alpha('violet', 0.35);
+    border-color: accent('violet');
+  }
+
+  .toggle-thumb {
+    transform: translateX(16px);
+    background: text-c('primary');
+  }
+}
+
+.toggle-label {
+  @include text('sm', 'regular', 'tight');
+  color: text-c('secondary');
+}

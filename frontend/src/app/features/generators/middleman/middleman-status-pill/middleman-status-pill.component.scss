@@ -1,0 +1,142 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.status-pill-host {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.compiling-card {
+  display: flex;
+  flex-direction: column;
+  background: surface('overlay');
+  overflow: hidden;
+  @include ai-stream-border('md');
+}
+
+.pill-bar {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+  width: 100%;
+  padding: space(2) space(3.5);
+  border-radius: radius('pill');
+  font-size: fs('xs');
+  font-weight: fw('medium');
+  border: 1px solid border-c('default');
+  background: surface('overlay');
+  color: text-c('primary');
+
+  &.is-compiling {
+    border: 0;
+    border-radius: 0;
+    background: accent-alpha('cyan', 0.12);
+    color: accent('cyan', '200');
+    cursor: pointer;
+    text-align: left;
+  }
+
+  &.is-review {
+    cursor: pointer;
+    text-align: left;
+    @include tinted('amber');
+
+    &:hover {
+      background: accent-alpha('amber', 0.18);
+    }
+  }
+
+  &.is-dispatching {
+    @include tinted('violet');
+
+    .pulse-dot {
+      @include status-dot('violet', true);
+    }
+  }
+
+  &.is-cold-start {
+    @include tinted('amber');
+
+    .pulse-dot {
+      @include status-dot('amber', true);
+    }
+  }
+
+  &.is-running {
+    @include tinted('emerald');
+
+    .pulse-dot {
+      @include status-dot('emerald', true);
+    }
+  }
+
+  &.is-completed {
+    @include tinted('emerald');
+  }
+
+  &.is-failed {
+    border-radius: radius('md');
+    @include tinted('coral');
+  }
+
+  &.is-cancelled,
+  &.is-queued {
+    color: text-c('secondary');
+
+    .pulse-dot {
+      @include status-dot('cyan', true);
+    }
+  }
+}
+
+.pill-text {
+  flex: 1;
+  min-width: 0;
+  @include truncate;
+}
+
+.pill-meta {
+  font-size: fs('xs');
+  color: text-c('secondary');
+}
+
+.pill-action {
+  font-size: fs('xs');
+  font-weight: fw('semibold');
+  color: accent('amber');
+}
+
+.live-token-stream {
+  margin: 0;
+  padding: space(2.5) space(3.5);
+  max-height: 110px;
+  background: surface('sunken');
+  border-top: 1px solid border-c('subtle');
+  color: text-c('secondary');
+  font-size: fs('xs');
+  line-height: lh('relaxed');
+  white-space: pre-wrap;
+  word-break: break-word;
+  @include scroll-y;
+}
+
+.stream-caret {
+  display: inline-block;
+  margin-left: 2px;
+  color: accent('cyan');
+  animation: fs-caret-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes fs-caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}

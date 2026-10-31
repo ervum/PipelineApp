@@ -1,0 +1,15 @@
+@use 'functions' as f;
+@use 'mixins' as m;
+
+.fs-stack { @include m.stack; }
+.fs-stack-sm { @include m.stack(f.space(2)); }
+.fs-stack-lg { @include m.stack(f.space(5)); }
+.fs-cluster { @include m.cluster; }
+.fs-spread { display: flex; align-items: center; justify-content: space-between; gap: f.space(2); }
+.fs-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: f.space(3); }
+.fs-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: f.space(3); }
+.fs-gallery { @include m.gallery-grid(180px); }
+.fs-gallery-sm { @include m.gallery-grid(120px); }
+.fs-scroll-y { @include m.scroll-y; }
+.fs-sr-only { @include m.sr-only; }
+.fs-divider { height: 1px; background: f.border-c('default'); border: 0; }

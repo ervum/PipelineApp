@@ -1,0 +1,116 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Image Category</label>
+    <fs-select
+      [options]="categoryOptions"
+      [value]="params().imageCategory"
+      (valueChange)=" $event && patch({ imageCategory: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Aspect Ratio Preset</label>
+    <div class="aspect-grid" role="radiogroup" aria-label="Aspect ratio preset">
+      @for (tile of aspectTiles; track tile.id) {
+        <button
+          type="button"
+          role="radio"
+          class="aspect-tile"
+          [class.is-active]="params().aspectPreset === tile.id"
+          [attr.aria-checked]="params().aspectPreset === tile.id"
+          (click)="patch({ aspectPreset: tile.id })"
+        >
+          <span class="aspect-box" [class]="tile.boxClass"></span>
+          <span class="aspect-tile__label">{{ tile.label }}</span>
+          <span class="aspect-tile__dims mono">{{ tile.dims }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <fs-slider
+        label="Vault Style Weight"
+        [min]="0"
+        [max]="1"
+        [step]="0.05"
+        [value]="params().styleWeight"
+        [format]="formatPct"
+        (valueChange)="patch({ styleWeight: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <fs-slider
+        label="Batch Count"
+        [min]="1"
+        [max]="4"
+        [step]="1"
+        [value]="params().batchCount"
+        [format]="formatInt"
+        (valueChange)="patch({ batchCount: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Reference Conditioning Mode</label>
+    <fs-select
+      [options]="referenceModeOptions"
+      [value]="params().referenceMode"
+      (valueChange)="$event && patch({ referenceMode: $event })"
+    />
+  </div>
+
+  @if (params().referenceMode !== 'NONE') {
+    <div class="ref-conditioning-box">
+      <fs-slider
+        label="Reference Strength"
+        [min]="0"
+        [max]="1"
+        [step]="0.05"
+        [value]="params().referenceStrength"
+        [format]="formatPct"
+        (valueChange)="patch({ referenceStrength: $event })"
+      />
+
+      <fs-reference-slot
+        label="Reference Conditioning Image"
+        [storageKey]="params().referenceStorageKey"
+        (storageKeyChange)="patch({ referenceStorageKey: $event })"
+      />
+    </div>
+  }
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

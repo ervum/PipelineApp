@@ -1,0 +1,166 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <div class="voice-header">
+      <label class="fs-label">Character Voice Profile</label>
+      @if (selectedVoiceProfile()?.characterSheetFileId; as sheetId) {
+        <a [routerLink]="['/vault/file', sheetId]" class="sheet-link">
+          Open {{ selectedVoiceProfile()?.characterSheetName ?? 'Character Sheet' }}
+        </a>
+      }
+    </div>
+
+    @if (voiceProfileOptions().length > 0) {
+      <fs-select
+        [options]="voiceProfileOptions()"
+        [value]="params().voiceProfileId"
+        (valueChange)="onSelectVoiceProfile($event)"
+        placeholder="Select character voice profile..."
+      />
+    } @else {
+      <div class="empty-voice-cta">
+        <span>No character voice profiles in this project yet.</span>
+        <a routerLink="/vault" class="sheet-link">Create in Project Vault →</a>
+      </div>
+    }
+  </div>
+
+  <div class="fs-field">
+    <div class="transcript-header">
+      <label class="fs-label">Spoken Transcript <span class="req-star">*</span></label>
+      <span class="mono word-counter">{{ wordCount() }} words</span>
+    </div>
+    <textarea
+      class="fs-textarea"
+      rows="3"
+      maxlength="5000"
+      placeholder="Enter exact spoken line for the character to perform…"
+      [attr.aria-invalid]="!!errors()['transcript']"
+      [ngModel]="params().transcript"
+      (ngModelChange)="patch({ transcript: $event })"
+    ></textarea>
+    @if (errors()['transcript']; as err) {
+      <span class="fs-field__error">{{ err }}</span>
+    }
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Line Type</label>
+    <fs-segmented
+      [options]="lineTypeOptions"
+      [value]="params().lineType"
+      (valueChange)="patch({ lineType: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Emotion &amp; Delivery Tags ({{ params().emotionTags.length }} / 4)</label>
+    <div class="emotion-chips">
+      @for (tag of allEmotions; track tag) {
+        <button
+          type="button"
+          class="emotion-chip"
+          [class.is-active]="hasEmotion(tag)"
+          (click)="toggleEmotion(tag)"
+        >
+          {{ tag }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="params-grid-2">
+    <fs-slider
+      label="Delivery Speed"
+      [min]="0.7"
+      [max]="1.3"
+      [step]="0.05"
+      [value]="params().speed"
+      [format]="formatSpeed"
+      (valueChange)="patch({ speed: $event })"
+    />
+
+    <fs-slider
+      label="Voice Stability"
+      [min]="0"
+      [max]="1"
+      [step]="0.05"
+      [value]="params().stability"
+      [format]="formatPct"
+      (valueChange)="patch({ stability: $event })"
+    />
+
+    <fs-slider
+      label="Similarity Boost"
+      [min]="0"
+      [max]="1"
+      [step]="0.05"
+      [value]="params().similarityBoost"
+      [format]="formatPct"
+      (valueChange)="patch({ similarityBoost: $event })"
+    />
+
+    <fs-slider
+      label="Style Exaggeration"
+      [min]="0"
+      [max]="1"
+      [step]="0.05"
+      [value]="params().style"
+      [format]="formatPct"
+      (valueChange)="patch({ style: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Output Format</label>
+      <fs-segmented
+        [options]="formatOptions"
+        [value]="params().outputFormat"
+        (valueChange)="patch({ outputFormat: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <fs-slider
+        label="Takes / Batch"
+        [min]="1"
+        [max]="3"
+        [step]="1"
+        [value]="params().batchCount"
+        [format]="formatInt"
+        (valueChange)="patch({ batchCount: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

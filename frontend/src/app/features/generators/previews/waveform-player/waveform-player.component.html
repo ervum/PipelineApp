@@ -1,0 +1,84 @@
+<div class="waveform-player">
+  <div
+    #waveContainer
+    class="wave-bed"
+    [class.is-loading]="loading()"
+    [style.height.px]="height()"
+    (click)="onSeekClick($event)"
+  >
+    <canvas #waveCanvas></canvas>
+    <div class="playhead" [style.transform]="'translateX(' + playheadX() + 'px)'"></div>
+  </div>
+
+  @if (error()) {
+    <div class="wave-error">{{ error() }}</div>
+  }
+
+  @if (!compact()) {
+    <div class="wave-controls">
+      <div class="wave-controls__left">
+        <button
+          type="button"
+          fsBtn
+          variant="primary"
+          size="sm"
+          [disabled]="loading() || !src()"
+          (click)="togglePlay()"
+        >
+          <fs-icon [name]="playing() ? 'pause' : 'play'" [size]="14" />
+          <span>{{ playing() ? 'Pause' : 'Play' }}</span>
+        </button>
+        <button
+          type="button"
+          fsBtn
+          variant="ghost"
+          size="icon"
+          class="fs-btn--sm"
+          aria-label="Stop"
+          [disabled]="!playing() && currentTime() === 0"
+          (click)="stop()"
+        >
+          <fs-icon name="stop" [size]="14" />
+        </button>
+        <button
+          type="button"
+          fsBtn
+          [variant]="loop() ? 'ai' : 'ghost'"
+          size="sm"
+          (click)="toggleLoop()"
+        >
+          <fs-icon name="loop" [size]="14" />
+          <span>Loop</span>
+        </button>
+        <span class="wave-time fs-num">{{ timeReadout() }}</span>
+      </div>
+
+      <div class="wave-controls__right">
+        <label class="volume-control">
+          <span class="fs-micro">Vol</span>
+          <input
+            type="range"
+            min="0"
+            max="1.2"
+            step="0.05"
+            [value]="volume()"
+            (input)="onVolumeChange($event)"
+          />
+        </label>
+        @if (src()) {
+          <button
+            type="button"
+            fsBtn
+            variant="ghost"
+            size="icon"
+            class="fs-btn--sm"
+            aria-label="Download audio"
+            (click)="downloadAudio()"
+          >
+            <fs-icon name="download" [size]="14" />
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

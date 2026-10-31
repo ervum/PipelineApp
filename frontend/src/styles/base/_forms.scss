@@ -1,0 +1,93 @@
+@use 'sass:map';
+@use 'styles/tokens' as t;
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-field {
+  display: flex;
+  flex-direction: column;
+  gap: f.space('1.5');
+
+  &__label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: f.space(2);
+    @include m.text('xs', 'medium', 'tight');
+    color: f.text-c('secondary');
+  }
+
+  &__hint {
+    @include m.text('xs', 'regular', 'snug');
+    color: f.text-c('muted');
+  }
+
+  &__error {
+    @include m.text('xs', 'medium', 'snug');
+    color: f.accent('coral', '300');
+  }
+}
+
+.fs-input,
+.fs-textarea,
+.fs-select-native {
+  width: 100%;
+  background: f.surface('overlay');
+  color: f.text-c('primary');
+  border: 1px solid f.border-c('default');
+  border-radius: f.radius('md');
+  padding: 0 f.space(3);
+  @include m.text('base', 'regular', 'normal');
+  transition:
+    border-color f.dur('fast') f.ease('standard'),
+    box-shadow f.dur('fast') f.ease('standard'),
+    background f.dur('fast') f.ease('standard');
+
+  &::placeholder {
+    color: f.text-c('muted');
+  }
+
+  &:hover:not(:disabled) {
+    border-color: f.border-c('strong');
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    border-color: f.border-c('focus');
+    box-shadow: map.get(t.$shadow, 'focus');
+  }
+
+  &[aria-invalid='true'] {
+    border-color: f.accent('coral');
+  }
+
+  @include m.disabled;
+}
+
+.fs-input,
+.fs-select-native {
+  height: 32px;
+}
+
+.fs-textarea {
+  min-height: 76px;
+  padding: f.space(2) f.space(3);
+  resize: vertical;
+  @include m.custom-scrollbar;
+}
+
+.fs-input--mono {
+  @include m.mono('sm');
+}
+
+.fs-input-group {
+  display: flex;
+  align-items: center;
+  gap: f.space('1.5');
+
+  > .fs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

@@ -1,0 +1,244 @@
+<div class="ws-composer">
+  <fs-generation-composer
+    [modality]="modality()"
+    [canSubmit]="canSubmit()"
+    [submitting]="submitting()"
+    [(rawPrompt)]="rawPrompt"
+    [(pinnedFileIds)]="pinnedFileIds"
+    [(params)]="params"
+    [(providerId)]="providerId"
+    [(providerModel)]="providerModel"
+    [(middlemanProfileId)]="middlemanProfileId"
+    [(skipMiddleman)]="skipMiddleman"
+    [(executionMode)]="executionMode"
+    (generate)="generate()"
+    (compileFirst)="compileFirst()"
+  >
+    <div modalityParams class="params-mount-slot">
+      @switch (modality()) {
+        @case ('ICONS_2D') {
+          <fs-icons-params
+            [params]="asIconsParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('ASSETS_3D') {
+          <fs-assets3d-params
+            [params]="asAssets3DParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('IMAGES') {
+          <fs-images-params
+            [params]="asImagesParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('VIDEO') {
+          <fs-video-params
+            [params]="asVideoParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('LORE') {
+          <fs-lore-params
+            [params]="asLoreParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('MUSIC') {
+          <fs-music-params
+            [params]="asMusicParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('VOICES') {
+          <fs-voices-params
+            [params]="asVoicesParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('SFX') {
+          <fs-sfx-params
+            [params]="asSfxParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+        @case ('OTHER') {
+          <fs-other-params
+            [params]="asOtherParams()"
+            (paramsChange)="updateParams($event)"
+          />
+        }
+      }
+    </div>
+
+    <div advancedParams>
+      <fs-advanced-params
+        [descriptor]="descriptor()"
+        [(overrides)]="advancedOverrides"
+        [recommendedParams]="recommendedParams()"
+      />
+    </div>
+  </fs-generation-composer>
+</div>
+
+<section class="ws-stage">
+  <header class="ws-stage__toolbar">
+    <div class="stage-toolbar-left">
+      <fs-icon [name]="meta().icon" [size]="16" />
+      <span class="stage-title">{{ meta().label }} Stage</span>
+      @if (focusedJob(); as job) {
+        <fs-status-pill [status]="job.status" />
+      }
+    </div>
+    <div class="stage-toolbar-right">
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        icon="history"
+        (click)="studio.historyCollapsed.set(!studio.historyCollapsed())"
+      >
+        {{ studio.historyCollapsed() ? 'Show History' : 'Hide History' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="ws-stage__canvas">
+    @if (previewAsset(); as asset) {
+      <div class="stage-asset-slot">
+        @switch (asset.modality) {
+          @case ('ICONS_2D') {
+            <fs-icon-previewer
+              [asset]="asset"
+              [batchAssets]="batchAssetsFor(asset)"
+              (selectBatchAsset)="selectAsset($event)"
+            />
+          }
+          @case ('ASSETS_3D') {
+            <fs-model-viewport [asset]="asset" />
+          }
+          @case ('IMAGES') {
+            <fs-image-previewer
+              [asset]="asset"
+              [compareAsset]="gallery.compare()"
+              [batchAssets]="batchAssetsFor(asset)"
+              (selectBatchAsset)="selectAsset($event)"
+              (clearCompare)="gallery.compareAssetId.set(null)"
+            />
+          }
+          @case ('VIDEO') {
+            <fs-video-previewer
+              [asset]="asset"
+              [compareAsset]="gallery.compare()"
+              [batchAssets]="batchAssetsFor(asset)"
+              (selectBatchAsset)="selectAsset($event)"
+              (clearCompare)="gallery.compareAssetId.set(null)"
+            />
+          }
+          @case ('LORE') {
+            <fs-lore-previewer
+              [asset]="asset"
+              [batchAssets]="batchAssetsFor(asset)"
+              (selectBatchAsset)="selectAsset($event)"
+            />
+          }
+          @case ('MUSIC') {
+            <fs-dual-waveform-player
+              [asset]="asset"
+              [compareAsset]="gallery.compare()"
+              (clearCompare)="gallery.compareAssetId.set(null)"
+            />
+          }
+          @case ('VOICES') {
+            <fs-voice-alignment-view
+              [asset]="asset"
+              [batchAssets]="batchAssetsFor(asset)"
+              (selectBatchAsset)="selectAsset($event)"
+            />
+          }
+          @case ('SFX') {
+            <fs-sfx-variation-grid
+              [asset]="asset"
+              [variations]="batchAssetsFor(asset)"
+              (selectVariation)="selectAsset($event)"
+            />
+          }
+          @case ('OTHER') {
+            @switch (asset.subMode) {
+              @case ('SPRITESHEET') {
+                <fs-spritesheet-player [asset]="asset" />
+              }
+              @case ('VFX_TEXTURE') {
+                <fs-image-previewer
+                  [asset]="asset"
+                  [compareAsset]="gallery.compare()"
+                  [batchAssets]="batchAssetsFor(asset)"
+                  (selectBatchAsset)="selectAsset($event)"
+                  (clearCompare)="gallery.compareAssetId.set(null)"
+                />
+              }
+              @case ('SHADER_CODE') {
+                <fs-code-preview [asset]="asset" />
+              }
+              @case ('LORE_JSON') {
+                <div class="lore-json-stage">
+                  <fs-json-tree-view [src]="asset.primaryUrl" />
+                </div>
+              }
+              @default {
+                <fs-image-previewer [asset]="asset" />
+              }
+            }
+          }
+        }
+      </div>
+    } @else {
+      <fs-empty-state
+        [icon]="meta().icon"
+        [title]="meta().label + ' Preview Stage'"
+        [message]="'Enter a creative prompt on the left and click Generate to run the pipeline for ' + meta().label + '.'"
+      />
+    }
+  </div>
+
+  @if (focusedJob(); as job) {
+    @if (job.status === 'AWAITING_REVIEW' && reviewDrawerOpen()) {
+      <fs-compile-review-drawer
+        [job]="job"
+        [descriptor]="descriptor()"
+        [stream]="focusedStream()"
+        (closed)="reviewDrawerOpen.set(false)"
+      />
+    }
+  }
+
+  <footer class="ws-stage__footer">
+    @if (focusedJob(); as job) {
+      <fs-middleman-status-pill
+        [job]="job"
+        [stream]="focusedStream()"
+        [workerState]="focusedWorkerState()"
+        (openReview)="reviewDrawerOpen.set(true)"
+        (retry)="retryFocusedJob()"
+      />
+    } @else {
+      <div class="stage-idle-bar">
+        <span class="mono">
+          Stage ready · {{ gallery.visibleItems().length }} assets in {{ meta().label }}
+        </span>
+      </div>
+    }
+  </footer>
+</section>
+
+@if (!studio.historyCollapsed()) {
+  <aside class="ws-history">
+    <fs-asset-history-drawer
+      [modality]="modality()"
+      (closeDrawer)="studio.historyCollapsed.set(true)"
+      (reRunWithEdits)="onReRunWithEdits($event)"
+    />
+  </aside>
+}

@@ -1,0 +1,124 @@
+<div class="image-previewer">
+  <div class="img-toolbar">
+    <div class="toolbar-left">
+      <button fsBtn variant="ghost" size="sm" (click)="zoomOut()">−</button>
+      <button fsBtn variant="ghost" size="sm" (click)="resetView()">
+        {{ (zoom() * 100).toFixed(0) }}%
+      </button>
+      <button fsBtn variant="ghost" size="sm" (click)="zoomIn()">+</button>
+
+      @if (dimensionsText(); as dim) {
+        <span class="dim-badge mono">{{ dim }} px</span>
+      }
+    </div>
+
+    <div class="toolbar-right">
+      <button
+        fsBtn
+        [variant]="tileMode() ? 'primary' : 'secondary'"
+        size="sm"
+        icon="grid"
+        (click)="tileMode.set(!tileMode())"
+      >
+        3×3 Seamless Tile
+      </button>
+
+      @if (tileSeamScore() !== null) {
+        <span class="seam-badge mono" [class]="seamBadgeClass()">
+          Seam Score: {{ (tileSeamScore()! * 100).toFixed(0) }}%
+        </span>
+      }
+
+      @if (compareAsset(); as cmp) {
+        <div class="compare-chip">
+          <fs-icon name="sliders" [size]="13" />
+          <span>Comparing vs {{ cmp.title }}</span>
+          <button
+            type="button"
+            class="clear-cmp-btn"
+            aria-label="Exit compare mode"
+            (click)="clearCompare.emit()"
+          >
+            ×
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="img-stage-wrap">
+    @if (compareAsset(); as cmp) {
+      <div class="ab-compare-stage">
+        <img [src]="cmp.primaryUrl" [alt]="cmp.title" class="ab-img is-before" />
+        <img
+          [src]="asset().primaryUrl"
+          [alt]="asset().title"
+          class="ab-img is-after"
+          [style.clipPath]="'inset(0 ' + (100 - compareSplit()) + '% 0 0)'"
+        />
+        <div class="ab-divider" [style.left.%]="compareSplit()">
+          <span class="ab-handle">A / B</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          class="ab-slider-input"
+          aria-label="A/B comparison split"
+          [value]="compareSplit()"
+          (input)="onCompareSliderInput($event)"
+        />
+        <span class="ab-label is-left">A · {{ asset().title }}</span>
+        <span class="ab-label is-right">B · {{ cmp.title }}</span>
+      </div>
+    } @else if (tileMode()) {
+      <div
+        class="tile-grid-stage"
+        (wheel)="onWheel($event)"
+        (dblclick)="resetView()"
+        [style.backgroundImage]="'url(' + asset().primaryUrl + ')'"
+        [style.backgroundSize]="33.333 * zoom() + '%'"
+      ></div>
+    } @else {
+      <div
+        class="pan-zoom-stage"
+        [class.is-panning]="isPanning()"
+        (wheel)="onWheel($event)"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (dblclick)="resetView()"
+      >
+        <img
+          [src]="asset().primaryUrl"
+          [alt]="asset().title"
+          class="stage-img"
+          draggable="false"
+          [style.transform]="
+            'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'
+          "
+        />
+      </div>
+    }
+
+    @if (batchAssets().length > 1) {
+      <aside class="batch-rail">
+        <span class="rail-title">Batch ({{ batchAssets().length }})</span>
+        <div class="rail-list">
+          @for (item of batchAssets(); track item.id) {
+            <button
+              type="button"
+              class="rail-item"
+              [class.is-active]="item.id === asset().id"
+              (click)="selectBatchAsset.emit(item)"
+            >
+              <img [src]="item.thumbnailUrl || item.primaryUrl" [alt]="item.title" />
+              <span class="rail-idx mono">#{{ item.batchIndex + 1 }}</span>
+            </button>
+          }
+        </div>
+      </aside>
+    }
+  </div>
+</div>

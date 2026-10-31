@@ -1,0 +1,151 @@
+@use 'sass:map';
+@use 'sass:math';
+@use 'tokens' as t;
+@use 'functions' as f;
+
+// ── Status visuals (declared before waveform-container which uses shimmer) ──
+@mixin status-dot($accent: 'emerald', $pulse: false) {
+  width: 8px; height: 8px; border-radius: 50%; background: f.accent($accent); flex: none;
+  box-shadow: 0 0 0 3px f.accent-alpha($accent, 0.18);
+  @if $pulse { animation: fs-pulse-ring 1.6s f.ease('standard') infinite; --pulse-color: #{f.accent-alpha($accent, 0.45)}; }
+}
+@mixin tinted($accent) {
+  color: f.accent($accent, '300'); background: f.accent-alpha($accent, 0.12); border: 1px solid f.accent-alpha($accent, 0.35);
+}
+@mixin shimmer($accent: 'cyan') {
+  background: linear-gradient(100deg, transparent 20%, f.accent-alpha($accent, 0.12) 45%, f.accent-alpha($accent, 0.22) 50%, f.accent-alpha($accent, 0.12) 55%, transparent 80%);
+  background-size: 220% 100%; animation: fs-shimmer 1.4s linear infinite;
+}
+/// Middleman streaming border (rotating conic gradient)
+@mixin ai-stream-border($radius: 'pill') {
+  position: relative; isolation: isolate; border-radius: f.radius($radius);
+  &::before {
+    content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; padding: 1px;
+    background: conic-gradient(from var(--fs-angle, 0deg), f.accent('cyan'), f.accent('violet'), transparent 40%, f.accent('cyan'));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: fs-rotate-angle 2.4s linear infinite;
+  }
+}
+@mixin diff-insert { background: f.accent-alpha('cyan', 0.16); color: f.accent('cyan', '200'); border-radius: 3px; box-shadow: inset 0 -1px 0 f.accent-alpha('cyan', 0.6); }
+@mixin diff-delete { background: f.accent-alpha('coral', 0.12); color: f.accent('coral', '300'); text-decoration: line-through; text-decoration-color: f.accent-alpha('coral', 0.7); border-radius: 3px; }
+
+// ── Responsive ───────────────────────────────────────────────────
+@mixin bp-up($key)   { @media (min-width: map.get(t.$breakpoint, $key)) { @content; } }
+@mixin bp-down($key) { @media (max-width: (map.get(t.$breakpoint, $key) - 0.02px)) { @content; } }
+@mixin reduced-motion { @media (prefers-reduced-motion: reduce) { @content; } }
+
+// ── Typography ───────────────────────────────────────────────────
+@mixin text($size: 'base', $weight: 'regular', $lh: 'normal') {
+  font-size: f.fs($size); font-weight: f.fw($weight); line-height: f.lh($lh);
+}
+@mixin mono($size: 'sm') { font-family: map.get(t.$font-family, 'mono'); font-size: f.fs($size); font-feature-settings: 'calt' 0; }
+@mixin caps-label { @include text('2xs', 'semibold', 'tight'); letter-spacing: map.get(t.$letter-spacing, 'caps'); text-transform: uppercase; color: f.text-c('muted'); }
+@mixin truncate($lines: 1) {
+  @if $lines == 1 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  @else { display: -webkit-box; -webkit-line-clamp: $lines; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
+// ── Surfaces ─────────────────────────────────────────────────────
+@mixin panel($level: 'raised', $radius: 'lg') {
+  background: f.surface($level); border: 1px solid f.border-c('default'); border-radius: f.radius($radius);
+}
+/// Glass panel: translucent obsidian with backdrop blur + 1px inner highlight.
+@mixin glass-panel($opacity: 0.72, $blur: 14px, $radius: 'lg') {
+  background: linear-gradient(180deg, rgba(31, 35, 51, $opacity) 0%, rgba(17, 19, 28, $opacity + 0.08) 100%);
+  border: 1px solid rgba(52, 58, 82, 0.7);
+  border-radius: f.radius($radius);
+  backdrop-filter: blur($blur) saturate(140%);
+  -webkit-backdrop-filter: blur($blur) saturate(140%);
+  box-shadow: map.get(t.$shadow, 'lg'), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  @supports not (backdrop-filter: blur(1px)) { background: f.surface('overlay'); }
+}
+@mixin card-interactive {
+  transition: border-color f.dur('fast') f.ease('standard'), background f.dur('fast') f.ease('standard'), transform f.dur('fast') f.ease('standard');
+  &:hover { border-color: f.border-c('strong'); background: f.surface('elevated'); }
+  &:active { transform: translateY(1px); }
+  &[aria-selected='true'], &.is-selected { border-color: f.accent('violet'); box-shadow: map.get(t.$glow, 'violet'); }
+}
+@mixin accent-glow($accent: 'violet') { box-shadow: map.get(t.$glow, $accent); }
+@mixin hairline($side: 'bottom', $color: f.border-c('default')) { border-#{$side}: 1px solid $color; }
+
+// ── Focus & interaction ──────────────────────────────────────────
+@mixin focus-ring { outline: none; &:focus-visible { box-shadow: map.get(t.$shadow, 'focus'); } }
+@mixin interactive-reset { appearance: none; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+@mixin disabled { &:disabled, &[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; pointer-events: none; } }
+
+// ── Scrollbars ───────────────────────────────────────────────────
+@mixin custom-scrollbar($size: 8px, $thumb: f.border-c('strong'), $track: transparent) {
+  scrollbar-width: thin; scrollbar-color: $thumb $track;
+  &::-webkit-scrollbar { width: $size; height: $size; }
+  &::-webkit-scrollbar-track { background: $track; }
+  &::-webkit-scrollbar-thumb { background: $thumb; border-radius: f.radius('pill'); border: 2px solid transparent; background-clip: content-box; }
+  &::-webkit-scrollbar-thumb:hover { background-color: f.text-c('muted'); }
+  &::-webkit-scrollbar-corner { background: transparent; }
+}
+@mixin scroll-y { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; @include custom-scrollbar; }
+@mixin scroll-x { overflow-x: auto; overflow-y: hidden; @include custom-scrollbar(6px); }
+
+// ── Alpha checkerboard (2D icon transparency) ───────────────────
+@mixin alpha-checkerboard($size: map.get(t.$checker, 'size'), $light: map.get(t.$checker, 'light'), $dark: map.get(t.$checker, 'dark')) {
+  background-color: $dark;
+  background-image:
+    linear-gradient(45deg, $light 25%, transparent 25%),
+    linear-gradient(-45deg, $light 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, $light 75%),
+    linear-gradient(-45deg, transparent 75%, $light 75%);
+  background-size: $size $size;
+  background-position: 0 0, 0 math.div($size, 2), math.div($size, 2) math.div(-$size, 2), math.div(-$size, 2) 0;
+}
+/// Pixel-exact preview (64px/32px icon readability checks)
+@mixin pixelated { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+// ── Waveform containers ─────────────────────────────────────────
+@mixin waveform-container($height: map.get(t.$waveform, 'height')) {
+  position: relative; height: $height; border-radius: f.radius('md'); overflow: hidden;
+  background:
+    linear-gradient(180deg, transparent calc(50% - 0.5px), rgba(52, 58, 82, 0.6) 50%, transparent calc(50% + 0.5px)),
+    f.surface('sunken');
+  border: 1px solid f.border-c('subtle');
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 1px; background: map.get(t.$waveform, 'playhead'); box-shadow: 0 0 8px rgba(231, 233, 243, 0.6); pointer-events: none; will-change: transform; }
+  .loop-region { position: absolute; top: 0; bottom: 0; background: map.get(t.$waveform, 'loop-region'); border-inline: 1px dashed f.accent('amber'); pointer-events: none; }
+  &.is-loading::after { content: ''; position: absolute; inset: 0; @include shimmer; }
+}
+
+// ── 3D viewport overlays ────────────────────────────────────────
+@mixin viewport-surface {
+  position: relative; overflow: hidden; border-radius: f.radius('lg'); border: 1px solid f.border-c('default');
+  background: radial-gradient(120% 90% at 50% 15%, map.get(t.$viewport, 'bg-top') 0%, map.get(t.$viewport, 'bg-bottom') 70%);
+  canvas { display: block; width: 100%; height: 100%; outline: none; }
+}
+@mixin viewport-overlay($position: 'top-left') {
+  position: absolute; z-index: f.z('raised'); display: flex; gap: f.space(1); padding: f.space(1);
+  @if $position == 'top-left'      { top: f.space(3); left: f.space(3); }
+  @if $position == 'top-right'     { top: f.space(3); right: f.space(3); }
+  @if $position == 'bottom-left'   { bottom: f.space(3); left: f.space(3); }
+  @if $position == 'bottom-right'  { bottom: f.space(3); right: f.space(3); }
+  @if $position == 'bottom-center' { bottom: f.space(3); left: 50%; transform: translateX(-50%); }
+  @include glass-panel(0.6, 10px, 'md');
+}
+@mixin viewport-stat { @include mono('2xs'); color: f.text-c('secondary'); dt { color: f.text-c('muted'); } dd { color: f.text-c('primary'); margin: 0; } }
+
+// ── Responsive galleries ────────────────────────────────────────
+@mixin auto-grid($min: 160px, $gap: f.space(3)) {
+  display: grid; gap: $gap; grid-template-columns: repeat(auto-fill, minmax(min($min, 100%), 1fr));
+}
+@mixin gallery-grid($min: 180px, $aspect: 1) {
+  @include auto-grid($min);
+  > * { aspect-ratio: $aspect; min-width: 0; }
+}
+@mixin masonry-columns($col-width: 220px, $gap: f.space(3)) {
+  columns: $col-width; column-gap: $gap; > * { break-inside: avoid; margin-bottom: $gap; }
+}
+
+// ── Layout helpers ──────────────────────────────────────────────
+@mixin stack($gap: f.space(3)) { display: flex; flex-direction: column; gap: $gap; }
+@mixin cluster($gap: f.space(2), $align: center) { display: flex; flex-wrap: wrap; align-items: $align; gap: $gap; }
+@mixin center { display: grid; place-items: center; }
+@mixin fill { position: absolute; inset: 0; }
+@mixin sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@mixin section-header { display: flex; align-items: center; justify-content: space-between; gap: f.space(2); padding: f.space(3) f.space(4); @include hairline('bottom'); }
+@mixin dropzone-active { border: 1px dashed f.accent('violet'); background: f.accent-alpha('violet', 0.08); box-shadow: inset 0 0 0 4px f.accent-alpha('violet', 0.06); }

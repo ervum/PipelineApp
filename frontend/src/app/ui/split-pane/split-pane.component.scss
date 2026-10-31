@@ -1,0 +1,28 @@
+@use 'styles' as *;
+
+:host {
+  display: grid;
+  grid-template-columns: minmax(0, var(--split, 50%)) 6px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.split-pane__left,
+.split-pane__right {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.split-handle {
+  cursor: col-resize;
+  background: border-c('subtle');
+  transition: background dur('fast') ease('standard');
+
+  &:hover,
+  &.is-dragging {
+    background: accent('violet');
+  }
+}

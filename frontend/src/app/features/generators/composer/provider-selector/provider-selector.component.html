@@ -1,0 +1,34 @@
+<div class="provider-selector">
+  <div class="provider-row">
+    <div class="fs-field">
+      <label class="fs-label">Generator Provider</label>
+      <fs-select
+        [options]="providerOptions()"
+        [value]="providerId()"
+        (valueChange)="onProviderChange($event)"
+        placeholder="Select generator..."
+      />
+    </div>
+
+    @if (modelOptions().length > 0) {
+      <div class="fs-field">
+        <label class="fs-label">Target Model</label>
+        <fs-select
+          [options]="modelOptions()"
+          [(value)]="providerModel"
+          placeholder="Default model"
+        />
+      </div>
+    }
+  </div>
+
+  @if (warningMessage(); as warn) {
+    <div class="provider-warning">
+      <fs-icon name="alert-triangle" [size]="14" />
+      <span>{{ warn }}</span>
+      @if (selectedProvider(); as prov) {
+        <a [routerLink]="['/providers', prov.id]" class="warning-link">Configure</a>
+      }
+    </div>
+  }
+</div>

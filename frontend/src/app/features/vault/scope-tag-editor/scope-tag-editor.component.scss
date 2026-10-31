@@ -1,0 +1,46 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.scope-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: space('1.5');
+}
+
+.scope-chip {
+  @include interactive-reset;
+  @include focus-ring;
+  padding: 4px space(2);
+  border-radius: radius('sm');
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  color: text-c('muted');
+  @include text('2xs', 'semibold', 'tight');
+  transition:
+    background dur('fast') ease('standard'),
+    border-color dur('fast') ease('standard'),
+    color dur('fast') ease('standard');
+
+  &:hover {
+    color: text-c('primary');
+    border-color: border-c('strong');
+  }
+
+  &.is-active {
+    &[data-accent='violet'] {
+      @include tinted('violet');
+    }
+    &[data-accent='cyan'] {
+      @include tinted('cyan');
+    }
+    &[data-accent='emerald'] {
+      @include tinted('emerald');
+    }
+    &[data-accent='amber'] {
+      @include tinted('amber');
+    }
+  }
+}

@@ -1,0 +1,180 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Icon Category</label>
+    <fs-segmented
+      [options]="categoryOptions"
+      [value]="params().iconCategory"
+      (valueChange)="patch({ iconCategory: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Frame Shape</label>
+    <div class="frame-grid" role="radiogroup" aria-label="Icon frame shape">
+      @for (shape of frameShapes; track shape.id) {
+        <button
+          type="button"
+          role="radio"
+          class="frame-tile"
+          [class.is-active]="params().frameShape === shape.id"
+          [attr.aria-checked]="params().frameShape === shape.id"
+          (click)="patch({ frameShape: shape.id })"
+        >
+          <svg viewBox="0 0 36 36" class="frame-svg" aria-hidden="true">
+            @switch (shape.id) {
+              @case ('NONE') {
+                <path
+                  d="M8 18 L18 8 L28 18 L18 28 Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-dasharray="3 2"
+                />
+              }
+              @case ('CIRCLE') {
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              }
+              @case ('ROUNDED_SQUARE') {
+                <rect
+                  x="6"
+                  y="6"
+                  width="24"
+                  height="24"
+                  rx="6"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              }
+              @case ('HEXAGON') {
+                <polygon
+                  points="18,4 30,11 30,25 18,32 6,25 6,11"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              }
+              @case ('SHIELD') {
+                <path
+                  d="M18 4 L30 9 V18 C30 25.5 24.5 30.5 18 33 C11.5 30.5 6 25.5 6 18 V9 Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              }
+              @case ('DIAMOND') {
+                <polygon
+                  points="18,4 32,18 18,32 4,18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              }
+            }
+          </svg>
+          <span>{{ shape.label }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="bg-row">
+    <fs-toggle
+      label="Alpha Background Removal (Die-Cut)"
+      [checked]="params().removeBackground"
+      (checkedChange)="
+        patch({
+          removeBackground: $event,
+          solidBackgroundHex: $event ? null : (params().solidBackgroundHex ?? '#11131C')
+        })
+      "
+    />
+
+    @if (!params().removeBackground) {
+      <div class="color-picker-row">
+        <label class="fs-label">Solid Background Colour</label>
+        <div class="color-inputs">
+          <input
+            type="color"
+            class="color-swatch-input"
+            [ngModel]="params().solidBackgroundHex ?? '#11131C'"
+            (ngModelChange)="patch({ solidBackgroundHex: $event })"
+          />
+          <input
+            type="text"
+            class="fs-input mono"
+            [ngModel]="params().solidBackgroundHex ?? '#11131C'"
+            (ngModelChange)="patch({ solidBackgroundHex: $event })"
+          />
+        </div>
+        @if (errors()['solidBackgroundHex']; as err) {
+          <span class="fs-field__error">{{ err }}</span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Master Resolution</label>
+      <fs-segmented
+        [options]="sizeOptions"
+        [value]="params().outputSize"
+        (valueChange)="patch({ outputSize: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <fs-slider
+        label="Batch Count"
+        [min]="1"
+        [max]="4"
+        [step]="1"
+        [value]="params().batchCount"
+        [format]="formatInt"
+        (valueChange)="patch({ batchCount: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+    @if (errors()['seed']; as err) {
+      <span class="fs-field__error">{{ err }}</span>
+    }
+  </div>
+</div>

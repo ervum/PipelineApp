@@ -1,0 +1,253 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.asset-card {
+  display: flex;
+  flex-direction: column;
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+  overflow: hidden;
+  cursor: pointer;
+  @include card-interactive;
+
+  &.is-comparing {
+    border-color: accent('cyan');
+    box-shadow: 0 0 0 1px accent('cyan');
+  }
+}
+
+.card-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  @include center;
+  @include alpha-checkerboard(10px);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  &:hover .hover-actions {
+    opacity: 1;
+  }
+}
+
+.thumb-glyph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: space(1.5);
+  color: text-c('secondary');
+}
+
+.submode-label {
+  font-size: 9px;
+  color: text-c('muted');
+}
+
+.video-duration-chip {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  padding: 1px 6px;
+  background: rgba(9, 10, 15, 0.85);
+  border: 1px solid border-c('default');
+  border-radius: 3px;
+  font-size: 10px;
+  color: accent('cyan');
+}
+
+.lore-thumb {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: space(1.5);
+  width: 100%;
+  height: 100%;
+  padding: space(3);
+  background: surface('sunken');
+
+  &__badges {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__excerpt {
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.4;
+    color: text-c('secondary');
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.lore-scale-chip {
+  padding: 1px 5px;
+  font-size: 9px;
+  color: accent('violet');
+  background: accent-alpha('violet', 0.16);
+  border: 1px solid accent-alpha('violet', 0.4);
+  border-radius: 3px;
+}
+
+.lore-words-chip {
+  padding: 1px 5px;
+  font-size: 9px;
+  color: accent('cyan');
+  background: accent-alpha('cyan', 0.14);
+  border: 1px solid accent-alpha('cyan', 0.35);
+  border-radius: 3px;
+}
+
+.thumb-top-left {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.approval-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: text-c('muted');
+  flex-shrink: 0;
+
+  &[data-approval='APPROVED'] {
+    background: accent('emerald');
+  }
+
+  &[data-approval='FINAL'] {
+    background: accent('cyan');
+  }
+
+  &[data-approval='REJECTED'] {
+    background: accent('coral');
+  }
+}
+
+.version-chip {
+  padding: 1px 5px;
+  background: rgba(9, 10, 15, 0.82);
+  border: 1px solid border-c('subtle');
+  border-radius: 3px;
+  font-size: 10px;
+  color: text-c('secondary');
+}
+
+.hover-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity dur('fast') ease('standard');
+}
+
+.action-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(17, 19, 28, 0.88);
+  border: 1px solid border-c('default');
+  border-radius: radius('sm');
+  color: text-c('secondary');
+  cursor: pointer;
+
+  &:hover {
+    color: text-c('primary');
+    border-color: border-c('strong');
+  }
+
+  &.is-active {
+    color: accent('amber');
+    border-color: accent-alpha('amber', 0.5);
+  }
+}
+
+.card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: space(2) space(2.5);
+  background: surface('raised');
+  border-top: 1px solid border-c('subtle');
+}
+
+.card-title-row,
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(1.5);
+}
+
+.asset-title {
+  font-size: fs('xs');
+  font-weight: fw('medium');
+  color: text-c('primary');
+  @include truncate;
+}
+
+.fav-indicator {
+  color: accent('amber');
+  flex-shrink: 0;
+}
+
+.cost-label {
+  font-size: 10px;
+  color: text-c('muted');
+}
+
+.asset-row {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  padding: space(2.5);
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+  cursor: pointer;
+  @include card-interactive;
+
+  &.is-comparing {
+    border-color: accent('cyan');
+  }
+}
+
+.row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+}
+
+.row-title-group {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+  min-width: 0;
+  flex: 1;
+}
+
+.row-meta {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+  flex-shrink: 0;
+}

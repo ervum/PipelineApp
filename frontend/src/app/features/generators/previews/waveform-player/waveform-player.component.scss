@@ -1,0 +1,53 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.waveform-player {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+}
+
+.wave-bed {
+  @include waveform-container;
+  cursor: pointer;
+}
+
+.wave-error {
+  @include text('xs', 'medium', 'tight');
+  color: accent('coral', '300');
+}
+
+.wave-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: space(2);
+
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+  }
+}
+
+.wave-time {
+  @include mono('xs');
+  color: text-c('secondary');
+}
+
+.volume-control {
+  display: inline-flex;
+  align-items: center;
+  gap: space(1);
+
+  input[type='range'] {
+    width: 68px;
+    accent-color: accent('violet');
+  }
+}

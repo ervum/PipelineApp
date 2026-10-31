@@ -1,0 +1,33 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.health-box {
+  @include panel('overlay', 'lg');
+  padding: space(4);
+}
+
+.health-msg {
+  padding: space(3);
+  border-radius: radius('md');
+  background: surface('sunken');
+  border: 1px solid border-c('subtle');
+  @include mono('xs');
+  color: text-c('secondary');
+}
+
+.worker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: space(2);
+
+  .worker-stat {
+    @include panel('sunken', 'md');
+    padding: space(3);
+    display: flex;
+    flex-direction: column;
+    gap: space(1);
+  }
+}

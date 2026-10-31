@@ -1,0 +1,37 @@
+<div class="json-editor" [class.is-invalid]="!validationState().valid">
+  <div class="json-editor__body">
+    <div class="json-editor__gutter" aria-hidden="true">
+      @for (line of lines(); track line) {
+        <div class="gutter-line" [class.is-error]="validationState().line === line">
+          {{ line }}
+        </div>
+      }
+    </div>
+    <div class="json-editor__stage">
+      <pre #overlayPre class="json-editor__overlay" aria-hidden="true" [innerHTML]="highlightedHtml()"></pre>
+      <textarea
+        #editorTextarea
+        class="json-editor__textarea"
+        spellcheck="false"
+        autocomplete="off"
+        autocapitalize="off"
+        [value]="value()"
+        (input)="onInput($event)"
+        (scroll)="onScroll($event)"
+        (keydown)="onKeyDown($event)"
+      ></textarea>
+    </div>
+  </div>
+  <div class="json-editor__status">
+    @if (validationState().valid) {
+      <span class="status-valid">Valid JSON</span>
+    } @else {
+      <span class="status-error">
+        {{ validationState().error }}
+        @if (validationState().line) {
+          (line {{ validationState().line }})
+        }
+      </span>
+    }
+  </div>
+</div>

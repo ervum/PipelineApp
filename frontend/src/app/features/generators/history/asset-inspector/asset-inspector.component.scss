@@ -1,0 +1,262 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.asset-inspector {
+  display: flex;
+  flex-direction: column;
+  background: surface('raised');
+  border-top: 1px solid border-c('strong');
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+  padding: space(2.5) space(3);
+  border-bottom: 1px solid border-c('subtle');
+}
+
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+  flex: 1;
+  min-width: 0;
+}
+
+.title-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: radius('sm');
+  padding: 2px 6px;
+  color: text-c('primary');
+  font-size: fs('xs');
+  font-weight: fw('semibold');
+
+  &:hover {
+    border-color: border-c('default');
+  }
+
+  &:focus {
+    outline: none;
+    background: surface('sunken');
+    border-color: accent('violet');
+  }
+}
+
+.version-badge {
+  padding: 2px 6px;
+  background: surface('overlay');
+  border: 1px solid border-c('subtle');
+  border-radius: radius('sm');
+  font-size: 10px;
+  color: text-c('secondary');
+}
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+  padding: space(3);
+}
+
+.inspector-block {
+  display: flex;
+  flex-direction: column;
+  gap: space(1.5);
+}
+
+.neg-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: space(2);
+  background: surface('sunken');
+  border: 1px solid border-c('subtle');
+  border-radius: radius('sm');
+}
+
+.neg-label {
+  font-size: 10px;
+  font-weight: fw('semibold');
+  color: accent('coral', '300');
+  text-transform: uppercase;
+}
+
+.neg-text {
+  margin: 0;
+  font-size: fs('xs');
+  color: text-c('secondary');
+  line-height: lh('normal');
+}
+
+.seed-dd {
+  display: inline-flex;
+  align-items: center;
+  gap: space(1.5);
+}
+
+.copy-seed-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: 3px;
+  color: text-c('secondary');
+  cursor: pointer;
+
+  &:hover {
+    color: text-c('primary');
+  }
+}
+
+.lineage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: space(1.5);
+}
+
+.lineage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: space(1);
+  padding: 3px 8px;
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('sm');
+  color: text-c('secondary');
+  font-size: fs('xs');
+  cursor: pointer;
+
+  &.is-current {
+    @include tinted('violet');
+  }
+}
+
+.files-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: space(1);
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+  padding: space(1.5) space(2);
+  background: surface('overlay');
+  border: 1px solid border-c('subtle');
+  border-radius: radius('sm');
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+  min-width: 0;
+}
+
+.file-role {
+  padding: 1px 5px;
+  background: surface('sunken');
+  border-radius: 3px;
+  font-size: 9px;
+  color: accent('cyan');
+}
+
+.file-name {
+  font-size: fs('xs');
+  color: text-c('primary');
+  @include truncate;
+}
+
+.file-right {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+  flex-shrink: 0;
+}
+
+.file-size {
+  font-size: 10px;
+  color: text-c('muted');
+}
+
+.dl-file-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: 0;
+  color: text-c('secondary');
+  cursor: pointer;
+
+  &:hover {
+    color: accent('cyan');
+  }
+}
+
+.inspector-actions {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  padding-top: space(2);
+  border-top: 1px solid border-c('subtle');
+}
+
+.actions-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: space(2);
+}
+
+.save-vault-modal {
+  display: flex;
+  flex-direction: column;
+  gap: space(3.5);
+}
+
+.scope-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: space(1.5);
+}
+
+.scope-chip {
+  padding: 4px 10px;
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('pill');
+  color: text-c('secondary');
+  font-size: fs('xs');
+  cursor: pointer;
+
+  &.is-active {
+    @include tinted('violet');
+  }
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: space(2);
+  padding-top: space(2);
+  border-top: 1px solid border-c('subtle');
+}

@@ -1,0 +1,69 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.code-preview {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.cp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: space(2.5);
+  padding: space(2.5) space(3.5);
+  background: surface('raised');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+}
+
+.lang-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: space(1);
+  padding: 2px 8px;
+  border-radius: radius('sm');
+  font-size: 11px;
+  font-weight: fw('semibold');
+  @include tinted('cyan');
+}
+
+.cp-title {
+  font-size: fs('sm');
+  font-weight: fw('semibold');
+  color: text-c('primary');
+}
+
+.line-meta {
+  font-size: fs('xs');
+  color: text-c('muted');
+}
+
+.cp-body {
+  flex: 1;
+  min-height: 280px;
+  background: surface('sunken');
+  border: 1px solid border-c('default');
+  border-radius: radius('lg');
+  overflow: auto;
+  @include scroll-y;
+}

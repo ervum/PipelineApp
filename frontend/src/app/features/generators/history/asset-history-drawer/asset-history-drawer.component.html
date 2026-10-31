@@ -1,0 +1,77 @@
+<aside class="asset-history-drawer">
+  <header class="drawer-header">
+    <div class="header-left">
+      <span class="drawer-title">HISTORY &amp; INSPECTOR</span>
+      <span class="count-chip mono">{{ gallery.visibleItems().length }}</span>
+    </div>
+
+    <div class="header-right">
+      <span class="spend-chip mono" title="Total spend for filtered assets">
+        {{ formattedTotalCost() }}
+      </span>
+      @if (overlayMode()) {
+        <button
+          fsBtn
+          variant="ghost"
+          size="sm"
+          icon="x"
+          aria-label="Close history drawer"
+          (click)="closeDrawer.emit()"
+        ></button>
+      }
+    </div>
+  </header>
+
+  <fs-history-filters />
+
+  <div class="drawer-scroll">
+    @if (gallery.visibleItems().length === 0) {
+      <div class="empty-wrap">
+        <fs-empty-state
+          icon="layers"
+          title="No Matching Assets"
+          message="Dispatch a generation job or adjust your gallery filters."
+        />
+      </div>
+    } @else {
+      <div class="assets-container" [class.is-audio-list]="isAudioModality()">
+        @for (item of gallery.visibleItems(); track item.id) {
+          <fs-asset-card
+            [asset]="item"
+            [selected]="gallery.selectedAssetId() === item.id"
+            [comparing]="gallery.compareAssetId() === item.id"
+            [listRow]="isAudioModality()"
+            (selectAsset)="onSelectAsset($event)"
+            (toggleFavorite)="onToggleFavorite($event)"
+            (toggleCompare)="onToggleCompare($event)"
+            (downloadAsset)="onDownloadAsset($event)"
+          />
+        }
+      </div>
+    }
+
+    <div #scrollSentinel class="scroll-sentinel"></div>
+
+    @if (gallery.selected(); as sel) {
+      @if (inspectorOpen()) {
+        <fs-asset-inspector
+          [asset]="sel"
+          (closed)="inspectorOpen.set(false)"
+          (reRunWithEdits)="reRunWithEdits.emit($event)"
+        />
+      } @else {
+        <div class="reopen-inspector-bar">
+          <button
+            fsBtn
+            variant="secondary"
+            size="sm"
+            icon="eye"
+            (click)="inspectorOpen.set(true)"
+          >
+            Inspect "{{ sel.title }}"
+          </button>
+        </div>
+      }
+    }
+  </div>
+</aside>

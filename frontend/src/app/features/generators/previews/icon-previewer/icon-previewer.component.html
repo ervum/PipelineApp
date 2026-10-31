@@ -1,0 +1,100 @@
+<div class="icon-previewer">
+  <div class="ip-toolbar">
+    <div class="toolbar-group">
+      <span class="toolbar-label">Backdrop</span>
+      <fs-segmented [options]="bgOptions" [value]="bgMode()" (valueChange)="bgMode.set($event)" />
+    </div>
+
+    <div class="toolbar-group">
+      <span class="toolbar-label">Zoom</span>
+      <fs-segmented
+        [options]="zoomOptions"
+        [value]="zoomMode()"
+        (valueChange)="zoomMode.set($event)"
+      />
+    </div>
+
+    <button
+      fsBtn
+      [variant]="silhouette() ? 'primary' : 'secondary'"
+      size="sm"
+      icon="eye"
+      (click)="silhouette.set(!silhouette())"
+    >
+      Silhouette Check
+    </button>
+  </div>
+
+  <div class="ip-stage-wrap">
+    <div
+      class="ip-canvas"
+      [attr.data-bg]="bgMode()"
+      [attr.data-zoom]="zoomMode()"
+      [class.is-silhouette]="silhouette()"
+    >
+      <img [src]="asset().primaryUrl" [alt]="asset().title" class="primary-icon-img" />
+    </div>
+
+    @if (batchAssets().length > 1) {
+      <aside class="batch-selector">
+        <span class="strip-label">Batch Variations ({{ batchAssets().length }})</span>
+        <div class="batch-grid">
+          @for (item of batchAssets(); track item.id) {
+            <button
+              type="button"
+              class="batch-tile"
+              [class.is-active]="item.id === asset().id"
+              (click)="selectBatchAsset.emit(item)"
+            >
+              <img [src]="item.thumbnailUrl || item.primaryUrl" [alt]="item.title" />
+              <span class="batch-idx mono">#{{ item.batchIndex + 1 }}</span>
+            </button>
+          }
+        </div>
+      </aside>
+    }
+  </div>
+
+  <div class="ip-strip">
+    <div class="strip-header">
+      <span class="strip-label">Multi-Resolution Readability Strip (1:1 CSS Pixels)</span>
+    </div>
+
+    <div class="strip-row">
+      @for (v of variants(); track v.size) {
+        <div class="variant-card" [class.is-large]="v.size === 512">
+          <div
+            class="variant-frame"
+            [attr.data-bg]="bgMode()"
+            [class.is-silhouette]="silhouette()"
+          >
+            <img
+              [src]="v.url"
+              [alt]="v.size + 'px variant'"
+              [style.width.px]="v.size === 512 ? 96 : v.size"
+              [style.height.px]="v.size === 512 ? 96 : v.size"
+              [class.is-pixelated]="v.pixelated"
+            />
+          </div>
+          <div class="variant-meta">
+            <span class="mono">{{ v.size }}×{{ v.size }}</span>
+            <a [href]="v.downloadUrl" download class="dl-link" aria-label="Download variant">↓</a>
+          </div>
+        </div>
+      }
+
+      <div class="variant-card">
+        <div class="inventory-slot-mock" [class.is-silhouette]="silhouette()">
+          <div class="inv-cell">
+            <img [src]="slot64Url()" [alt]="asset().title" class="inv-img is-pixelated" />
+            <span class="inv-hotkey mono">Q</span>
+            <span class="inv-qty mono">×1</span>
+          </div>
+        </div>
+        <div class="variant-meta">
+          <span class="mono">HUD Slot</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

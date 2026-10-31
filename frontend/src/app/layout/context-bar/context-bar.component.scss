@@ -1,0 +1,95 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+  height: layout('context-bar-height');
+}
+
+.context-bar {
+  height: 100%;
+  padding: 0 space(4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(3);
+  background: surface('raised');
+  @include hairline('bottom');
+
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: space(3);
+    min-width: 0;
+  }
+}
+
+.proj-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: space(2);
+  padding: 3px space('2');
+  border-radius: radius('pill');
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  @include text('xs', 'semibold', 'tight');
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+}
+
+.ctx-link {
+  @include interactive-reset;
+  @include focus-ring;
+  display: inline-flex;
+  align-items: center;
+  gap: space('1.5');
+  padding: 3px space(2);
+  border-radius: radius('sm');
+  color: text-c('secondary');
+  @include text('xs', 'medium', 'tight');
+
+  &:hover {
+    background: surface('overlay');
+    color: text-c('primary');
+  }
+}
+
+.mm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: space('1.5');
+  @include text('xs', 'medium', 'tight');
+  color: accent('cyan', '300');
+}
+
+.spend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  @include mono('xs');
+  color: text-c('secondary');
+}
+
+.ws-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: space('1.5');
+  @include text('xs', 'medium', 'tight');
+  color: accent('amber', '300');
+
+  &__dot {
+    @include status-dot('amber', true);
+  }
+
+  &.is-connected {
+    color: text-c('secondary');
+
+    .ws-indicator__dot {
+      @include status-dot('emerald', false);
+    }
+  }
+}

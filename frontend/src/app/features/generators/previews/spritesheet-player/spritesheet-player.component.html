@@ -1,0 +1,92 @@
+<div class="spritesheet-player">
+  <header class="sp-toolbar">
+    <div class="toolbar-left">
+      <button
+        fsBtn
+        [variant]="playing() ? 'primary' : 'secondary'"
+        size="sm"
+        [icon]="playing() ? 'pause' : 'play'"
+        (click)="togglePlay()"
+      >
+        {{ playing() ? 'Pause' : 'Play' }}
+      </button>
+
+      <span class="frame-readout mono">
+        Frame {{ currentFrame() + 1 }} / {{ frameCount() }}
+      </span>
+
+      <div class="fps-slider-wrap">
+        <fs-slider
+          label="FPS"
+          [min]="4"
+          [max]="60"
+          [step]="1"
+          [value]="fps()"
+          [format]="formatFps"
+          (valueChange)="fps.set($event)"
+        />
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <fs-toggle
+        label="Ping-Pong"
+        [checked]="pingPong()"
+        (checkedChange)="pingPong.set($event)"
+      />
+      <fs-toggle
+        label="Onion Skin (30%)"
+        [checked]="onionSkin()"
+        (checkedChange)="onionSkin.set($event)"
+      />
+      <fs-toggle
+        label="Grid Overlay"
+        [checked]="showGridOverlay()"
+        (checkedChange)="showGridOverlay.set($event)"
+      />
+
+      <button fsBtn variant="secondary" size="sm" icon="download" (click)="downloadSheet()">
+        Sheet PNG
+      </button>
+      <button fsBtn variant="secondary" size="sm" icon="code" (click)="downloadMetadataJson()">
+        Metadata JSON
+      </button>
+    </div>
+  </header>
+
+  <div class="sp-body">
+    <div class="sheet-pane">
+      <span class="pane-label">Full Atlas Sheet ({{ columns() }} × {{ rows() }})</span>
+      <div class="sheet-stage">
+        <div class="sheet-img-wrap">
+          <img [src]="asset().primaryUrl" [alt]="asset().title" class="sheet-img" />
+          @if (showGridOverlay()) {
+            <div
+              class="grid-overlay"
+              [style.gridTemplateColumns]="'repeat(' + columns() + ', 1fr)'"
+              [style.gridTemplateRows]="'repeat(' + rows() + ', 1fr)'"
+            >
+              @for (idx of frameCells(); track idx) {
+                <button
+                  type="button"
+                  class="grid-cell"
+                  [class.is-current]="currentFrame() === idx"
+                  (click)="selectFrame(idx)"
+                >
+                  <span class="cell-num mono">{{ idx + 1 }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="anim-pane">
+      <span class="pane-label">Animated Flipbook Preview</span>
+      <div class="anim-stage">
+        <canvas #previewCanvas width="256" height="256" class="anim-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+</div>

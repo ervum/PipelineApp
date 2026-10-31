@@ -1,0 +1,113 @@
+<div class="pin-picker">
+  <div class="pin-header">
+    <span class="fs-label">Pinned Vault References ({{ pinnedFileIds().length }} / 12)</span>
+    <button
+      fsBtn
+      variant="ghost"
+      size="sm"
+      icon="pin"
+      (click)="modalOpen.set(true)"
+    >
+      Pin from Vault
+    </button>
+  </div>
+
+  @if (pinnedFiles().length > 0) {
+    <div class="pinned-chips">
+      @for (f of pinnedFiles(); track f.id) {
+        <span class="pin-chip">
+          <fs-icon [name]="iconForKind(f.kind)" [size]="13" />
+          <span class="pin-chip__name">{{ f.name }}</span>
+          <button
+            type="button"
+            class="pin-chip__remove"
+            aria-label="Unpin file"
+            (click)="removePin(f.id)"
+          >
+            <fs-icon name="x" [size]="12" />
+          </button>
+        </span>
+      }
+    </div>
+  }
+
+  <fs-modal
+    [(open)]="modalOpen"
+    size="lg"
+    title="Pin Context Files from Project Vault"
+  >
+    <div class="picker-modal-body">
+      <div class="picker-toolbar">
+        <input
+          class="fs-input picker-search"
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Search files by name or path..."
+        />
+        <div class="scope-filter-strip">
+          <button
+            type="button"
+            class="scope-chip"
+            [class.is-active]="scopeFilter() === null"
+            (click)="scopeFilter.set(null)"
+          >
+            All
+          </button>
+          @for (s of scopes; track s) {
+            <button
+              type="button"
+              class="scope-chip"
+              [class.is-active]="scopeFilter() === s"
+              (click)="scopeFilter.set(s)"
+            >
+              {{ scopeLabels[s] }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="picker-grid">
+        @for (file of filteredVaultFiles(); track file.id) {
+          <button
+            type="button"
+            class="picker-tile fs-card fs-card--interactive"
+            [class.is-pinned]="isPinned(file.id)"
+            (click)="togglePin(file.id)"
+          >
+            <div class="picker-tile__thumb">
+              @if (file.thumbnailUrl) {
+                <img [src]="file.thumbnailUrl" [alt]="file.name" />
+              } @else {
+                <fs-icon [name]="iconForKind(file.kind)" [size]="24" />
+              }
+            </div>
+            <div class="picker-tile__info">
+              <span class="picker-tile__name">{{ file.name }}</span>
+              <span class="picker-tile__path">{{ file.folderPath }}</span>
+              <div class="picker-tile__scopes">
+                @for (sc of file.scopes.slice(0, 2); track sc) {
+                  <span class="fs-badge fs-badge--neutral">{{ scopeLabels[sc] }}</span>
+                }
+              </div>
+            </div>
+            <div class="picker-tile__check">
+              @if (isPinned(file.id)) {
+                <fs-icon name="check" [size]="16" />
+              }
+            </div>
+          </button>
+        } @empty {
+          <p class="picker-empty">No matching files in the active project vault.</p>
+        }
+      </div>
+
+      <div class="picker-footer">
+        <span class="mono">{{ pinnedFileIds().length }} / 12 pinned</span>
+        <button fsBtn variant="primary" size="sm" (click)="modalOpen.set(false)">
+          Done
+        </button>
+      </div>
+    </div>
+  </fs-modal>
+</div>

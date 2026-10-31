@@ -1,0 +1,25 @@
+<div class="code-preview">
+  <header class="cp-toolbar">
+    <div class="toolbar-left">
+      <span class="lang-badge mono">
+        <fs-icon name="code" [size]="13" />
+        <span>{{ language() }}</span>
+      </span>
+      <span class="cp-title">{{ asset().title }}</span>
+      <span class="line-meta mono">{{ lineCount() }} lines</span>
+    </div>
+
+    <div class="toolbar-right">
+      <button fsBtn variant="secondary" size="sm" icon="copy" (click)="copyCode()">
+        Copy Code
+      </button>
+      <button fsBtn variant="primary" size="sm" icon="download" (click)="downloadCode()">
+        Export {{ extension() }}
+      </button>
+    </div>
+  </header>
+
+  <div class="cp-body">
+    <fs-code-view [code]="codeText()" [language]="language()" />
+  </div>
+</div>

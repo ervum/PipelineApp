@@ -1,0 +1,15 @@
+@use 'styles' as *;
+
+:host {
+  display: contents;
+}
+
+.confirm-msg {
+  @include text('base', 'regular', 'normal');
+  color: text-c('secondary');
+}
+
+.confirm-actions {
+  display: flex;
+  gap: space(2);
+}

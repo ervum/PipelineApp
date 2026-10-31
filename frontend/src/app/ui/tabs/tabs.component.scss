@@ -1,0 +1,7 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

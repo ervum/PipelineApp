@@ -1,0 +1,68 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.tree-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: space('1.5');
+  height: 30px;
+  padding-right: space(2);
+  border-radius: radius('sm');
+  color: text-c('secondary');
+  @include text('xs', 'medium', 'tight');
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: surface('overlay');
+    color: text-c('primary');
+  }
+
+  &.is-selected {
+    background: accent-alpha('violet', 0.16);
+    color: text-c('primary');
+  }
+
+  &.is-drag-over {
+    @include dropzone-active;
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include truncate(1);
+  }
+
+  &__count {
+    @include mono('2xs');
+    color: text-c('muted');
+  }
+}
+
+.tree-chevron {
+  @include interactive-reset;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: text-c('muted');
+
+  &:hover {
+    color: text-c('primary');
+  }
+}
+
+.tree-chevron-spacer {
+  width: 14px;
+  flex: none;
+}

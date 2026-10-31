@@ -1,0 +1,365 @@
+<div class="mcp-page">
+  <header class="mcp-header">
+    <div class="mcp-header__title-group">
+      <div class="mcp-header__icon">
+        <fs-icon name="terminal" [size]="20" />
+      </div>
+      <div>
+        <h1 class="mcp-header__title">Model Context Protocol (MCP) Server & AI Tool Hub</h1>
+        <p class="mcp-header__subtitle">
+          Expose all 9 ForgeStudio asset generators, Project Vault, Middleman compiler, and Asset Library to
+          Antigravity, Claude Desktop, Cursor, or custom AI agents.
+        </p>
+      </div>
+    </div>
+
+    <div class="mcp-header__actions">
+      @if (status(); as st) {
+        <span class="status-badge">
+          <span class="status-badge__dot"></span>
+          <span>ONLINE · JSON-RPC {{ st.protocolVersion }}</span>
+        </span>
+      }
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="refresh"
+        [disabled]="loading()"
+        (click)="refreshAll()"
+      >
+        Refresh Telemetry
+      </button>
+    </div>
+  </header>
+
+  @if (status(); as st) {
+    <section class="mcp-cards-row">
+      <article class="telemetry-card">
+        <div class="telemetry-card__header">
+          <span class="telemetry-card__label">MCP Endpoints & Transports</span>
+          <span class="mono telemetry-card__tag">{{ st.toolCount }} Active Tools</span>
+        </div>
+        <div class="endpoint-list">
+          <div class="endpoint-row">
+            <span class="endpoint-row__kind">HTTP JSON-RPC</span>
+            <code class="mono">{{ st.httpEndpoint }}</code>
+            <button
+              type="button"
+              class="copy-mini-btn"
+              (click)="copyEndpoint(st.httpEndpoint)"
+            >
+              Copy
+            </button>
+          </div>
+          <div class="endpoint-row">
+            <span class="endpoint-row__kind">SSE Stream</span>
+            <code class="mono">{{ st.sseEndpoint }}</code>
+            <button
+              type="button"
+              class="copy-mini-btn"
+              (click)="copyEndpoint(st.sseEndpoint)"
+            >
+              Copy
+            </button>
+          </div>
+          <div class="endpoint-row">
+            <span class="endpoint-row__kind">Stdio CLI</span>
+            <code class="mono">{{ st.stdioCommand }} {{ st.stdioArgs.join(' ') }}</code>
+            <button
+              type="button"
+              class="copy-mini-btn"
+              (click)="copyEndpoint(st.stdioCommand + ' ' + st.stdioArgs.join(' '))"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <article class="telemetry-card telemetry-card--ram">
+        <div class="telemetry-card__header">
+          <span class="telemetry-card__label">VRAM / 32GB DDR5 System RAM Fallback Profile</span>
+          <span class="ram-pill mono">
+            {{ st.hardwareProfile.systemRamGb }}GB {{ st.hardwareProfile.ramType }}
+          </span>
+        </div>
+        <p class="ram-desc">
+          {{ st.hardwareProfile.notes }}
+        </p>
+        <div class="ram-flags">
+          <span class="ram-flag mono">
+            Fallback: {{ st.hardwareProfile.vramFallbackEnabled ? 'ENABLED' : 'DISABLED' }}
+          </span>
+          <span class="ram-flag mono">
+            Default Policy: {{ st.hardwareProfile.recommendedMemoryStrategy }}
+          </span>
+          <span class="ram-flag mono">Pinned DMA + Tiled VAE</span>
+        </div>
+      </article>
+
+      <article class="telemetry-card">
+        <div class="telemetry-card__header">
+          <div class="snippet-tabs">
+            <button
+              type="button"
+              class="snippet-tab"
+              [class.is-active]="snippetTab() === 'ANTIGRAVITY_HTTP'"
+              (click)="snippetTab.set('ANTIGRAVITY_HTTP')"
+            >
+              Antigravity (HTTP)
+            </button>
+            <button
+              type="button"
+              class="snippet-tab"
+              [class.is-active]="snippetTab() === 'ANTIGRAVITY_STDIO'"
+              (click)="snippetTab.set('ANTIGRAVITY_STDIO')"
+            >
+              Antigravity (Stdio)
+            </button>
+            <button
+              type="button"
+              class="snippet-tab"
+              [class.is-active]="snippetTab() === 'CLAUDE_CURSOR'"
+              (click)="snippetTab.set('CLAUDE_CURSOR')"
+            >
+              Claude / Cursor
+            </button>
+          </div>
+          <button
+            fsBtn
+            variant="secondary"
+            size="sm"
+            icon="copy"
+            (click)="copySnippet()"
+          >
+            Copy Config
+          </button>
+        </div>
+        <pre class="snippet-pre mono">{{ clientSnippetCode() }}</pre>
+      </article>
+    </section>
+  }
+
+  <div class="mcp-workbench">
+    <aside class="tool-catalog">
+      <div class="tool-catalog__controls">
+        <input
+          type="search"
+          class="fs-input"
+          placeholder="Search 22 MCP tools…"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+        <div class="category-pills">
+          @for (cat of categories; track cat.id) {
+            <button
+              type="button"
+              class="cat-pill"
+              [class.is-active]="categoryFilter() === cat.id"
+              (click)="categoryFilter.set(cat.id)"
+            >
+              {{ cat.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="tool-list">
+        @for (tool of filteredTools(); track tool.name) {
+          <button
+            type="button"
+            class="tool-item"
+            [class.is-active]="selectedToolName() === tool.name"
+            (click)="selectTool(tool.name)"
+          >
+            <div class="tool-item__top">
+              <span class="tool-item__name mono">{{ tool.name }}</span>
+              @if (tool.modality) {
+                <span class="tool-item__modality mono">{{ tool.modality }}</span>
+              }
+            </div>
+            <div class="tool-item__title">{{ tool.title }}</div>
+            <p class="tool-item__desc">{{ tool.description }}</p>
+          </button>
+        }
+      </div>
+    </aside>
+
+    @if (selectedTool(); as tool) {
+      <section class="tool-inspector">
+        <div class="inspector-header">
+          <div>
+            <div class="inspector-header__title-row">
+              <code class="inspector-tool-name mono">{{ tool.name }}</code>
+              @if (tool.modality) {
+                <span class="modality-pill mono">{{ tool.modality }}</span>
+              }
+              <span class="category-pill mono">{{ tool.category }}</span>
+            </div>
+            <p class="inspector-desc">{{ tool.description }}</p>
+          </div>
+          <div class="inspector-header__actions">
+            <button
+              fsBtn
+              variant="secondary"
+              size="sm"
+              (click)="loadExamplePreset()"
+            >
+              Reset Example Args
+            </button>
+            <button
+              fsBtn
+              variant="primary"
+              size="sm"
+              icon="play"
+              [disabled]="invoking()"
+              (click)="invokeSelectedTool()"
+            >
+              {{ invoking() ? 'Executing Tool…' : 'Invoke MCP Tool Live' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="inspector-split">
+          <div class="schema-pane">
+            <div class="pane-title">Input JSON Schema ({{ schemaProperties().length }} parameters)</div>
+            <div class="schema-table-wrap">
+              <table class="schema-table">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Type</th>
+                    <th>Default</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (prop of schemaProperties(); track prop.name) {
+                    <tr>
+                      <td>
+                        <code class="mono prop-name">{{ prop.name }}</code>
+                        @if (prop.required) {
+                          <span class="req-badge">required</span>
+                        }
+                      </td>
+                      <td class="mono prop-type">{{ prop.type }}</td>
+                      <td class="mono prop-default">{{ prop.defaultValue ?? '—' }}</td>
+                      <td class="prop-desc">
+                        {{ prop.description }}
+                        @if (prop.enumValues) {
+                          <div class="enum-chips">
+                            @for (ev of prop.enumValues; track ev) {
+                              <span class="enum-chip mono">{{ ev }}</span>
+                            }
+                          </div>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="playground-pane">
+            <div class="pane-title">Live Tool Call Playground (JSON Arguments)</div>
+            <textarea
+              class="args-textarea mono"
+              rows="11"
+              [ngModel]="argsJsonDraft()"
+              (ngModelChange)="argsJsonDraft.set($event)"
+              spellcheck="false"
+            ></textarea>
+
+            @if (lastResult(); as res) {
+              <div class="result-box" [class.result-box--error]="res.isError">
+                <div class="result-box__header">
+                  <span class="result-status mono">
+                    {{ res.isError ? 'TOOL ERROR' : 'TOOL CALL SUCCEEDED' }}
+                  </span>
+                  @if (lastDurationMs() !== null) {
+                    <span class="mono">{{ lastDurationMs() }} ms</span>
+                  }
+                </div>
+
+                <div class="result-blocks">
+                  @for (block of res.content; track $index) {
+                    @if (block.type === 'image') {
+                      <div class="result-image-card">
+                        <div class="result-image-card__label mono">
+                          Inline MCP Image Block ({{ block.mimeType }})
+                        </div>
+                        <img
+                          class="result-image"
+                          [src]="formatImageDataUri(block.mimeType, block.data)"
+                          alt="Generated MCP Asset"
+                        />
+                      </div>
+                    }
+                    @if (block.type === 'text') {
+                      <div class="result-text-card">
+                        <fs-code-view [code]="block.text" language="JSON" />
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+
+  <section class="mcp-logs-section">
+    <div class="mcp-logs-section__header">
+      <span class="pane-title">Recent MCP Tool Invocations ({{ logs().length }})</span>
+      <span class="logs-hint">Click any invocation row to load its arguments into the playground</span>
+    </div>
+
+    @if (logs().length === 0) {
+      <div class="logs-empty">
+        No MCP tool calls recorded yet in this session. Click <strong>Invoke MCP Tool Live</strong> above or call
+        <code>POST /api/v1/mcp</code> from Antigravity to test!
+      </div>
+    } @else {
+      <div class="logs-table-wrap">
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Tool Name</th>
+              <th>Transport</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Generated Asset IDs</th>
+              <th>Arguments / Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of logs(); track entry.id) {
+              <tr class="log-row" (click)="loadLogEntryIntoPlayground(entry)">
+                <td class="mono">{{ entry.timestamp }}</td>
+                <td><code class="mono">{{ entry.toolName }}</code></td>
+                <td class="mono">{{ entry.transport }}</td>
+                <td>
+                  <span
+                    class="log-status mono"
+                    [class.is-ok]="!entry.isError"
+                    [class.is-err]="entry.isError"
+                  >
+                    {{ entry.isError ? 'ERROR' : 'SUCCESS' }}
+                  </span>
+                </td>
+                <td class="mono">{{ entry.durationMs }} ms</td>
+                <td class="mono">{{ entry.assetIds.length > 0 ? entry.assetIds.join(', ') : '—' }}</td>
+                <td class="mono">{{ entry.errorMessage ?? entry.argsSummary }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

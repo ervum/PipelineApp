@@ -1,0 +1,62 @@
+@if (vault.tree(); as root) {
+  <div class="tree-root" role="tree">
+    <ng-container
+      *ngTemplateOutlet="folderNodeTpl; context: { $implicit: root, depth: 0 }"
+    ></ng-container>
+  </div>
+}
+
+<ng-template #folderNodeTpl let-folder let-depth="depth">
+  <div class="tree-branch" role="treeitem" [attr.aria-expanded]="isExpanded(folder.id)">
+    <div
+      class="tree-row"
+      [class.is-selected]="vault.selectedFolderId() === folder.id"
+      [class.is-drag-over]="dragOverFolderId() === folder.id"
+      [style.paddingLeft.px]="8 + depth * 14"
+      [draggable]="folder.parentId !== null"
+      (click)="selectFolder(folder)"
+      (contextmenu)="onContextMenu(folder, $event)"
+      (dragstart)="onFolderDragStart(folder, $event)"
+      (dragover)="onFolderDragOver(folder, $event)"
+      (dragleave)="onFolderDragLeave(folder, $event)"
+      (drop)="onFolderDrop(folder, $event)"
+    >
+      @if (folder.children && folder.children.length > 0) {
+        <button
+          type="button"
+          class="tree-chevron"
+          aria-label="Toggle folder"
+          (click)="toggleExpand(folder.id, $event)"
+        >
+          <fs-icon
+            [name]="isExpanded(folder.id) ? 'chevron-down' : 'chevron-right'"
+            [size]="12"
+          />
+        </button>
+      } @else {
+        <span class="tree-chevron-spacer"></span>
+      }
+      <fs-icon
+        [name]="isExpanded(folder.id) ? 'folder-open' : 'folder'"
+        [size]="15"
+      />
+      <span class="tree-row__name">{{ folder.parentId === null ? 'Project Root' : folder.name }}</span>
+      <span class="tree-row__count fs-num">{{ folder.fileCount }}</span>
+    </div>
+
+    @if (isExpanded(folder.id) && folder.children) {
+      @for (child of folder.children; track child.id) {
+        <ng-container
+          *ngTemplateOutlet="folderNodeTpl; context: { $implicit: child, depth: depth + 1 }"
+        ></ng-container>
+      }
+    }
+  </div>
+</ng-template>
+
+<fs-context-menu
+  [items]="menuItems"
+  [(open)]="menuOpen"
+  [anchor]="menuAnchor()"
+  (select)="onMenuSelect($event)"
+/>

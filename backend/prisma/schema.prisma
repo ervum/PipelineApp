@@ -1,0 +1,532 @@
+// ForgeStudio Control Room — Prisma schema (Prisma 6.x, PostgreSQL 16)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Modality {
+  ICONS_2D
+  ASSETS_3D
+  IMAGES
+  VIDEO
+  LORE
+  MUSIC
+  VOICES
+  SFX
+  OTHER
+}
+
+/// DB values match the product vocabulary ("2D_ICONS"); client identifiers must be valid TS identifiers.
+enum ContextScope {
+  ALWAYS_INCLUDE
+  ICONS_2D  @map("2D_ICONS")
+  ASSETS_3D @map("3D_ASSETS")
+  IMAGES
+  VIDEO
+  LORE
+  MUSIC
+  VOICES
+  SFX
+  OTHER
+}
+
+enum VaultFileKind {
+  MARKDOWN
+  TEXT
+  JSON
+  IMAGE
+  AUDIO
+  MODEL_3D
+  OTHER
+}
+
+enum VisionStatus {
+  NONE
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum ExecutionTier {
+  CLOUD_API
+  RUNPOD
+  LOCAL
+}
+
+enum ProviderRole {
+  LLM
+  VISION
+  GENERATOR
+}
+
+enum ProviderKind {
+  ANTHROPIC
+  OPENAI
+  GEMINI
+  GOOGLE_WEB
+  FAL
+  REPLICATE
+  STABILITY
+  MESHY
+  TRIPO3D
+  RODIN
+  ELEVENLABS
+  CARTESIA
+  FISH_AUDIO
+  RUNPOD_SERVERLESS
+  COMFYUI
+  A1111
+  OLLAMA
+  OPENAI_COMPATIBLE
+  GENERIC_HTTP
+  DEMO
+}
+
+enum HealthState {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNREACHABLE
+  UNAUTHORIZED
+}
+
+enum ExecutionMode {
+  AUTO_FIRE
+  INTERCEPT
+}
+
+enum JobStatus {
+  QUEUED
+  COMPILING
+  AWAITING_REVIEW
+  READY
+  DISPATCHING
+  COLD_START
+  RUNNING
+  INGESTING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum GenerationSubMode {
+  STANDARD
+  TEXT_TO_3D
+  IMAGE_TO_3D
+  TEXT_TO_VIDEO
+  IMAGE_TO_VIDEO
+  SPRITESHEET
+  VFX_TEXTURE
+  SHADER_CODE
+  LORE_JSON
+}
+
+enum ApprovalStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+  FINAL
+}
+
+enum AssetFileRole {
+  PRIMARY
+  THUMBNAIL
+  PREVIEW
+  VARIANT_512
+  VARIANT_128
+  VARIANT_64
+  VARIANT_32
+  TEXTURE_BASE_COLOR
+  TEXTURE_NORMAL
+  TEXTURE_ORM
+  STEM
+  FRAME
+  ALIGNMENT
+  METADATA
+  SOURCE_REFERENCE
+}
+
+// ───────────────────────────── Projects & Vault ─────────────────────────────
+
+model Project {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  tagline        String   @default("")
+  description    String   @default("") @db.Text
+  genre          String   @default("")
+  accentHex      String   @default("#7C3AED")
+  coverStorageKey String?
+  /// Short always-on project summary; injected first by the Middleman.
+  globalSummary  String   @default("") @db.Text
+  archivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  folders            VaultFolder[]
+  files              VaultFile[]
+  voiceProfiles      VoiceProfile[]
+  jobs               GenerationJob[]
+  assets             GeneratedAsset[]
+  middlemanTemplates MiddlemanTemplate[]
+
+  @@map("projects")
+}
+
+model VaultFolder {
+  id        String   @id @default(cuid())
+  projectId String
+  parentId  String?
+  name      String
+  /// Materialised path, "/" for root, "/Art Direction/Palettes" for nested. Recomputed on rename/move.
+  path      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent   VaultFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children VaultFolder[] @relation("FolderTree")
+  files    VaultFile[]
+
+  @@unique([projectId, path])
+  @@index([projectId, parentId])
+  @@map("vault_folders")
+}
+
+model VaultFile {
+  id                  String         @id @default(cuid())
+  projectId           String
+  folderId            String
+  name                String
+  extension           String
+  kind                VaultFileKind
+  mimeType            String
+  sizeBytes           Int            @default(0)
+  checksumSha256      String?
+  /// Editable text body for MARKDOWN / TEXT / JSON kinds (source of truth for those kinds).
+  contentText         String?        @db.Text
+  /// Binary location for IMAGE / AUDIO / MODEL_3D kinds (and a mirror copy for text uploads).
+  storageKey          String?
+  thumbnailKey        String?
+  scopes              ContextScope[] @default([])
+  /// 0–100, higher first when assembling Middleman context.
+  priority            Int            @default(50)
+  description         String         @default("")
+  tokenEstimate       Int            @default(0)
+  styleDescriptorText String?        @db.Text
+  styleDescriptorJson Json?
+  visionStatus        VisionStatus   @default(NONE)
+  visionModel         String?
+  visionError         String?
+  visionAnalyzedAt    DateTime?
+  width               Int?
+  height              Int?
+  durationMs          Int?
+  metadata            Json           @default("{}")
+  sourceAssetId       String?        @unique
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  folder        VaultFolder     @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  sourceAsset   GeneratedAsset? @relation("AssetSavedToVault", fields: [sourceAssetId], references: [id], onDelete: SetNull)
+  voiceProfiles VoiceProfile[]
+
+  @@unique([folderId, name])
+  @@index([projectId, kind])
+  @@index([scopes], type: Gin)
+  @@map("vault_files")
+}
+
+model VoiceProfile {
+  id                    String   @id @default(cuid())
+  projectId             String
+  name                  String
+  characterSheetFileId  String?
+  providerConfigId      String?
+  /// Vendor voice id (ElevenLabs voice_id, Cartesia voice id, Fish reference_id, OpenAI voice name, local speaker id).
+  externalVoiceId       String   @default("")
+  description           String   @default("") @db.Text
+  defaultSettings       Json     @default("{}")
+  sampleStorageKey      String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characterSheet VaultFile?        @relation(fields: [characterSheetFileId], references: [id], onDelete: SetNull)
+  providerConfig AiProviderConfig? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, name])
+  @@map("voice_profiles")
+}
+
+// ───────────────────────────── Providers & Middleman ─────────────────────────────
+
+model AiProviderConfig {
+  id                   String         @id @default(cuid())
+  name                 String         @unique
+  kind                 ProviderKind
+  tier                 ExecutionTier
+  roles                ProviderRole[]
+  modalities           Modality[]
+  baseUrl              String?
+  /// "v1:<ivB64>:<tagB64>:<cipherB64>" AES-256-GCM, never returned by the API.
+  encryptedSecret      String?
+  secretLast4          String?
+  runpodEndpointId     String?
+  defaultModel         String?
+  /// [{ id, label, modalities[], notes? }]
+  models               Json           @default("[]")
+  /// RunPod / GenericHttp JSON body template with {{variables}}.
+  payloadTemplate      Json?
+  /// { assets: [{ path, encoding: "base64"|"url"|"text", mimeType?, role? }], progressPath?, errorPath? }
+  outputMapping        Json?
+  /// ComfyUI workflow (API format) with {{variables}}.
+  workflowTemplate     Json?
+  extraHeaders         Json           @default("{}")
+  /// { timeoutMs, pollIntervalMs, maxPollIntervalMs, maxConcurrency, costPerSecondUsd, costPerRequestUsd, executionTimeoutMs, ttlMs }
+  settings             Json           @default("{}")
+  defaultForModalities Modality[]     @default([])
+  isEnabled            Boolean        @default(true)
+  healthState          HealthState    @default(UNKNOWN)
+  healthLatencyMs      Int?
+  healthMessage        String?
+  healthCheckedAt      DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  middlemanProfiles MiddlemanProfile[]
+  jobs              GenerationJob[]
+  voiceProfiles     VoiceProfile[]
+
+  @@index([kind])
+  @@map("ai_provider_configs")
+}
+
+model MiddlemanProfile {
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  providerConfigId      String
+  model                 String
+  temperature           Float    @default(0.4)
+  maxOutputTokens       Int      @default(1600)
+  /// Budget for vault context injected into the user message.
+  maxContextTokens      Int      @default(12000)
+  supportsVision        Boolean  @default(false)
+  attachReferenceImages Boolean  @default(false)
+  maxReferenceImages    Int      @default(3)
+  jsonMode              Boolean  @default(true)
+  isDefault             Boolean  @default(false)
+  isVisionDefault       Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  providerConfig AiProviderConfig @relation(fields: [providerConfigId], references: [id], onDelete: Cascade)
+  jobs           GenerationJob[]
+
+  @@map("middleman_profiles")
+}
+
+/// Modality System Blueprint. projectId null = global default; non-null = project override.
+model MiddlemanTemplate {
+  id                     String   @id @default(cuid())
+  projectId              String?
+  modality               Modality
+  name                   String
+  systemTemplate         String   @db.Text
+  defaultNegativePrompt  String   @default("") @db.Text
+  /// Extra hard rules appended verbatim, one per line.
+  hardConstraints        String   @default("") @db.Text
+  version                Int      @default(1)
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project Project?        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jobs    GenerationJob[]
+
+  @@unique([projectId, modality, version])
+  @@index([modality, isActive])
+  @@map("middleman_templates")
+}
+
+// ───────────────────────────── Jobs & Assets ─────────────────────────────
+
+model GenerationJob {
+  id                   String            @id @default(cuid())
+  projectId            String
+  modality             Modality
+  subMode              GenerationSubMode @default(STANDARD)
+  executionMode        ExecutionMode
+  status               JobStatus         @default(QUEUED)
+  rawPrompt            String            @db.Text
+  pinnedFileIds        String[]          @default([])
+  userParams           Json
+  referenceStorageKeys String[]          @default([])
+  skipMiddleman        Boolean           @default(false)
+
+  middlemanProfileId   String?
+  middlemanTemplateId  String?
+  middlemanRawOutput   String?           @db.Text
+  /// CompiledPrompt as produced by the LLM (validated).
+  compiledPayload      Json?
+  /// CompiledPrompt after user edits in Intercept mode (dispatch uses this when present).
+  editedPayload        Json?
+  contextFileIds       String[]          @default([])
+  middlemanUsage       Json?
+  middlemanStartedAt   DateTime?
+  middlemanCompletedAt DateTime?
+
+  providerConfigId     String
+  providerModel        String?
+  tier                 ExecutionTier
+  externalJobId        String?
+  externalStatus       String?
+  /// Adapter-specific resume handle (e.g. { statusUrl, responseUrl } for fal).
+  remoteHandle         Json?
+  seed                 Int?
+  batchCount           Int               @default(1)
+  progressPercent      Int               @default(0)
+  progressStage        String?
+  coldStartMs          Int?
+  queueDelayMs         Int?
+  executionMs          Int?
+  costUsd              Decimal?          @db.Decimal(12, 6)
+  pollCount            Int               @default(0)
+  nextPollAt           DateTime?
+  attempt              Int               @default(1)
+  errorCode            String?
+  errorMessage         String?           @db.Text
+  parentJobId          String?
+
+  createdAt            DateTime          @default(now())
+  dispatchedAt         DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  updatedAt            DateTime          @updatedAt
+
+  project           Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  middlemanProfile  MiddlemanProfile?    @relation(fields: [middlemanProfileId], references: [id], onDelete: SetNull)
+  middlemanTemplate MiddlemanTemplate?   @relation(fields: [middlemanTemplateId], references: [id], onDelete: SetNull)
+  providerConfig    AiProviderConfig     @relation(fields: [providerConfigId], references: [id], onDelete: Restrict)
+  parentJob         GenerationJob?       @relation("JobLineage", fields: [parentJobId], references: [id], onDelete: SetNull)
+  childJobs         GenerationJob[]      @relation("JobLineage")
+  events            GenerationJobEvent[]
+  assets            GeneratedAsset[]
+
+  @@index([status, nextPollAt])
+  @@index([projectId, modality, createdAt(sort: Desc)])
+  @@map("generation_jobs")
+}
+
+model GenerationJobEvent {
+  id         String     @id @default(cuid())
+  jobId      String
+  type       String
+  fromStatus JobStatus?
+  toStatus   JobStatus?
+  message    String     @default("")
+  payload    Json       @default("{}")
+  createdAt  DateTime   @default(now())
+
+  job GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@map("generation_job_events")
+}
+
+model GeneratedAsset {
+  id               String            @id @default(cuid())
+  projectId        String
+  jobId            String?
+  modality         Modality
+  subMode          GenerationSubMode @default(STANDARD)
+  title            String
+  /// Lineage group: all versions/variations of the same asset share it.
+  assetGroupId     String
+  version          Int               @default(1)
+  batchIndex       Int               @default(0)
+  parentAssetId    String?
+  rawPrompt        String            @db.Text
+  enhancedPrompt   String            @db.Text
+  negativePrompt   String            @default("") @db.Text
+  approval         ApprovalStatus    @default(DRAFT)
+  isFavorite       Boolean           @default(false)
+  tags             String[]          @default([])
+  notes            String            @default("") @db.Text
+  /// Modality metadata; shape per modality in shared AssetMetadata union.
+  metadata         Json              @default("{}")
+  providerConfigId String?
+  providerKind     ProviderKind
+  providerModel    String?
+  tier             ExecutionTier
+  costUsd          Decimal?          @db.Decimal(12, 6)
+  executionMs      Int?
+  seed             Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  job          GenerationJob?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  parentAsset  GeneratedAsset?      @relation("AssetLineage", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  childAssets  GeneratedAsset[]     @relation("AssetLineage")
+  files        GeneratedAssetFile[]
+  savedToVault VaultFile?           @relation("AssetSavedToVault")
+
+  @@index([projectId, modality, createdAt(sort: Desc)])
+  @@index([assetGroupId, version])
+  @@map("generated_assets")
+}
+
+model GeneratedAssetFile {
+  id         String        @id @default(cuid())
+  assetId    String
+  role       AssetFileRole
+  storageKey String        @unique
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  width      Int?
+  height     Int?
+  durationMs Int?
+  format     String
+  sortIndex  Int           @default(0)
+  createdAt  DateTime      @default(now())
+
+  asset GeneratedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, role])
+  @@map("generated_asset_files")
+}
+
+// ───────────────────────────── Tracked Web Chat Sessions ─────────────────────────────
+
+model WebChatSession {
+  id               String    @id @default(uuid())
+  providerConfigId String?
+  projectId        String?
+  jobId            String?
+  role             String    // 'MIDDLEMAN' | 'GENERATOR'
+  modality         String?   // 'IMAGES' | 'VIDEO' | 'VOICES' | 'MUSIC' | 'LORE' | etc.
+  platform         String    // 'gemini' | 'aistudio'
+  modelId          String
+  chatUrl          String
+  externalChatId   String?
+  chatTitle        String?
+  createdAt        DateTime  @default(now())
+  deletedFromWebAt DateTime?
+
+  @@index([jobId])
+  @@index([providerConfigId])
+  @@index([deletedFromWebAt])
+  @@map("web_chat_sessions")
+}

@@ -1,0 +1,197 @@
+@let j = job();
+<div class="status-pill-host" [attr.data-status]="j.status">
+  @switch (j.status) {
+    @case ('QUEUED') {
+      <div class="pill-bar is-queued">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">Queued · awaiting worker slot</span>
+        <span class="pill-meta mono">{{ elapsedSec() }}s</span>
+      </div>
+    }
+
+    @case ('COMPILING') {
+      <div class="compiling-card ai-stream-border">
+        <div class="pill-bar is-compiling" (click)="toggleStream()">
+          <fs-icon name="sparkles" [size]="15" />
+          <span class="pill-text">
+            {{
+              streamChars() > 0
+                ? 'Middleman compiling · ' + streamChars() + ' chars · ' + elapsedSec() + 's'
+                : 'Middleman initializing browser & compiling... · ' + elapsedSec() + 's'
+            }}
+          </span>
+          @if (isGoogleWebJob()) {
+            <button
+              type="button"
+              fsBtn
+              variant="secondary"
+              size="sm"
+              (click)="onAnswerNow($event)"
+            >
+              Answer Now
+            </button>
+            <button
+              type="button"
+              fsBtn
+              variant="ghost"
+              size="sm"
+              (click)="onToggleBrowser($event)"
+            >
+              {{ providerState.browserVisible() ? 'Hide Browser' : 'Show Browser' }}
+            </button>
+          }
+          <fs-icon [name]="streamExpanded() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+        </div>
+
+        @if (streamExpanded()) {
+          <pre #streamBox class="live-token-stream mono">{{ streamTail() }}<span class="stream-caret" aria-hidden="true">▋</span></pre>
+        }
+      </div>
+    }
+
+    @case ('AWAITING_REVIEW') {
+      <button type="button" class="pill-bar is-review" (click)="openReview.emit()">
+        <fs-icon name="eye" [size]="15" />
+        <span class="pill-text">Review compiled prompt</span>
+        <span class="pill-action">Open Inspector →</span>
+      </button>
+    }
+
+    @case ('READY') {
+      <div class="pill-bar is-dispatching">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">Dispatching to {{ j.providerName }}</span>
+        <span class="pill-meta mono">{{ elapsedSec() }}s</span>
+      </div>
+    }
+
+    @case ('DISPATCHING') {
+      <div class="pill-bar is-dispatching">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">
+          {{ j.progressStage || 'Dispatching to ' + j.providerName + '...' }}
+        </span>
+        @if (isGoogleWebJob()) {
+          <button
+            type="button"
+            fsBtn
+            variant="secondary"
+            size="sm"
+            (click)="onAnswerNow($event)"
+          >
+            Answer Now
+          </button>
+          <button
+            type="button"
+            fsBtn
+            variant="ghost"
+            size="sm"
+            (click)="onToggleBrowser($event)"
+          >
+            {{ providerState.browserVisible() ? 'Hide Browser' : 'Show Browser' }}
+          </button>
+        }
+        <span class="pill-meta mono">{{ elapsedSec() }}s</span>
+      </div>
+    }
+
+    @case ('COLD_START') {
+      <div class="pill-bar is-cold-start">
+        <span class="pulse-dot"></span>
+        <fs-icon name="gpu" [size]="15" />
+        <span class="pill-text">
+          RunPod cold start · workers {{ initializingWorkers() }} initializing · {{ elapsedSec() }}s
+        </span>
+      </div>
+    }
+
+    @case ('RUNNING') {
+      <div class="pill-bar is-running">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">
+          Generating · {{ j.progressPercent }}% · {{ j.progressStage || 'processing...' }}
+        </span>
+        @if (isGoogleWebJob()) {
+          <button
+            type="button"
+            fsBtn
+            variant="secondary"
+            size="sm"
+            (click)="onAnswerNow($event)"
+          >
+            Answer Now
+          </button>
+          <button
+            type="button"
+            fsBtn
+            variant="ghost"
+            size="sm"
+            (click)="onToggleBrowser($event)"
+          >
+            {{ providerState.browserVisible() ? 'Hide Browser' : 'Show Browser' }}
+          </button>
+        }
+        <span class="pill-meta mono">{{ elapsedSec() }}s</span>
+      </div>
+    }
+
+    @case ('INGESTING') {
+      <div class="pill-bar is-running">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">Ingesting &amp; post-processing · {{ j.progressPercent }}%</span>
+        <span class="pill-meta mono">{{ elapsedSec() }}s</span>
+      </div>
+    }
+
+    @case ('COMPLETED') {
+      <div class="pill-bar is-completed">
+        <fs-icon name="check" [size]="15" />
+        <span class="pill-text">Done in {{ formattedDuration() }} · {{ formattedCost() }}</span>
+        @if (isGoogleWebJob()) {
+          <button
+            type="button"
+            fsBtn
+            variant="ghost"
+            size="sm"
+            icon="trash"
+            title="Delete the Gemini Web / AI Studio chat created for this job"
+            (click)="onDeleteJobChat($event)"
+          >
+            Delete Chat
+          </button>
+          <button
+            type="button"
+            fsBtn
+            variant="ghost"
+            size="sm"
+            icon="trash"
+            title="Delete all tracked web chats from the last run"
+            (click)="onDeleteLastRunChats($event)"
+          >
+            Delete Last Run Chats
+          </button>
+        }
+      </div>
+    }
+
+    @case ('FAILED') {
+      <div class="pill-bar is-failed">
+        <fs-icon name="alert-triangle" [size]="15" />
+        <span class="pill-text">{{ j.errorMessage || 'Generation failed' }}</span>
+        <button fsBtn variant="secondary" size="sm" icon="refresh" (click)="retry.emit()">
+          Retry
+        </button>
+      </div>
+    }
+
+    @case ('CANCELLED') {
+      <div class="pill-bar is-cancelled">
+        <fs-icon name="x" [size]="14" />
+        <span class="pill-text">Job cancelled</span>
+        <button fsBtn variant="ghost" size="sm" icon="refresh" (click)="retry.emit()">
+          Retry
+        </button>
+      </div>
+    }
+  }
+</div>

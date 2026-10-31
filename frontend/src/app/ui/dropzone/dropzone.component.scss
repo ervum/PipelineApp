@@ -1,0 +1,44 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: space('1.5');
+  padding: space(4);
+  border: 1px dashed border-c('strong');
+  border-radius: radius('lg');
+  background: surface('sunken');
+  color: text-c('secondary');
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color dur('fast') ease('standard'),
+    background dur('fast') ease('standard');
+
+  &:hover {
+    border-color: accent('violet');
+    background: surface('overlay');
+  }
+
+  &.is-drag-over {
+    @include dropzone-active;
+  }
+
+  @include focus-ring;
+
+  &__label {
+    @include text('sm', 'medium', 'tight');
+    color: text-c('primary');
+  }
+
+  &__hint {
+    @include text('xs', 'regular', 'tight');
+    color: text-c('muted');
+  }
+}

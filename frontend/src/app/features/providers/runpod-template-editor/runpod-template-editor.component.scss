@@ -1,0 +1,88 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.runpod-tpl-editor {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+}
+
+.var-palette {
+  @include panel('overlay', 'md');
+  padding: space(3);
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+}
+
+.vars-toggle {
+  @include interactive-reset;
+  @include text('xs', 'medium', 'tight');
+  color: accent('cyan', '300');
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.var-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.var-chip {
+  @include interactive-reset;
+  @include focus-ring;
+  padding: 2px 7px;
+  border-radius: radius('xs');
+  @include tinted('cyan');
+  @include mono('2xs');
+
+  &:hover {
+    background: accent-alpha('cyan', 0.24);
+  }
+}
+
+.sample-vars-drawer {
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: space(1);
+}
+
+.tpl-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: space(3);
+  min-height: 360px;
+
+  .tpl-col {
+    display: flex;
+    flex-direction: column;
+    gap: space('1.5');
+    min-width: 0;
+  }
+}
+
+.preview-code-box {
+  flex: 1 1 auto;
+  min-height: 300px;
+  border-radius: radius('md');
+  border: 1px solid accent-alpha('cyan', 0.35);
+  background: surface('sunken');
+  overflow: auto;
+}
+
+.missing-vars {
+  padding: space(2);
+  border-radius: radius('sm');
+  @include tinted('amber');
+  @include text('xs', 'medium', 'snug');
+  display: flex;
+  flex-wrap: wrap;
+  gap: space('1.5');
+}

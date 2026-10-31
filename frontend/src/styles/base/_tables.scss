@@ -1,0 +1,56 @@
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-table {
+  width: 100%;
+  border-collapse: collapse;
+  @include m.text('sm', 'regular', 'snug');
+
+  th,
+  td {
+    height: 32px;
+    padding: 0 f.space(3);
+    text-align: left;
+    border-bottom: 1px solid f.border-c('subtle');
+    vertical-align: middle;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: f.z('sticky');
+    background: f.surface('raised');
+    @include m.caps-label;
+    border-bottom: 1px solid f.border-c('default');
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  tbody tr:hover {
+    background: f.surface('overlay');
+  }
+
+  tbody tr.is-selected {
+    background: f.accent-alpha('violet', 0.14);
+  }
+}
+
+.fs-kv {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: f.space('1.5') f.space(3);
+  @include m.text('xs', 'regular', 'normal');
+
+  dt {
+    color: f.text-c('muted');
+    @include m.truncate(1);
+  }
+
+  dd {
+    margin: 0;
+    color: f.text-c('primary');
+    word-break: break-word;
+  }
+}

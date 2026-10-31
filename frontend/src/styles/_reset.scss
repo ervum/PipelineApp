@@ -1,0 +1,36 @@
+@use 'sass:map';
+@use 'tokens' as t;
+@use 'functions' as f;
+@use 'mixins' as m;
+
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html, body { height: 100%; }
+body {
+  background: f.surface('base');
+  color: f.text-c('primary');
+  font-family: map.get(t.$font-family, 'sans');
+  @include m.text('base');
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden; // shell manages scrolling regions
+}
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
+a {
+  color: f.accent('violet', '300');
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+::selection {
+  background: f.accent-alpha('violet', 0.45);
+  color: f.text-c('primary');
+}
+:focus-visible {
+  outline: none;
+  box-shadow: map.get(t.$shadow, 'focus');
+}
+[hidden] { display: none !important; }

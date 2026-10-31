@@ -1,0 +1,121 @@
+@if (advancedSpecs().length > 0) {
+  <div class="adv-params">
+    <div class="adv-header">
+      <button
+        type="button"
+        class="adv-toggle"
+        [attr.aria-expanded]="expanded()"
+        (click)="expanded.set(!expanded())"
+      >
+        <fs-icon [name]="expanded() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+        <span>Advanced Adapter Parameters</span>
+        @if (activeOverrideCount() > 0) {
+          <span class="fs-badge fs-badge--info">{{ activeOverrideCount() }} customized</span>
+        }
+      </button>
+
+      @if (activeOverrideCount() > 0) {
+        <button
+          fsBtn
+          variant="ghost"
+          size="sm"
+          icon="rotate-ccw"
+          (click)="resetOverrides()"
+        >
+          Reset
+        </button>
+      }
+    </div>
+
+    @if (expanded()) {
+      <div class="adv-body">
+        @for (spec of advancedSpecs(); track spec.key) {
+          <div class="adv-field">
+            <div class="adv-field__top">
+              <label class="fs-label">{{ spec.label }}</label>
+              @if (recommendedHint(spec); as rec) {
+                <button
+                  type="button"
+                  class="rec-hint"
+                  (click)="applyRecommended(spec)"
+                >
+                  <span>Middleman hint: {{ rec }}</span>
+                  <span class="rec-apply">Apply</span>
+                </button>
+              }
+            </div>
+
+            @switch (spec.type) {
+              @case ('number') {
+                <div class="num-row">
+                  <fs-slider
+                    [min]="spec.min ?? 0"
+                    [max]="spec.max ?? 100"
+                    [step]="spec.step ?? 0.1"
+                    [value]="numValue(spec)"
+                    (valueChange)="setParam(spec.key, $event)"
+                  />
+                  <input
+                    class="fs-input num-input mono"
+                    type="number"
+                    [min]="spec.min ?? 0"
+                    [max]="spec.max ?? 100"
+                    [step]="spec.step ?? 0.1"
+                    [ngModel]="numValue(spec)"
+                    (ngModelChange)="setParam(spec.key, +$event)"
+                  />
+                </div>
+              }
+              @case ('integer') {
+                <div class="num-row">
+                  <fs-slider
+                    [min]="spec.min ?? 0"
+                    [max]="spec.max ?? 100"
+                    [step]="spec.step ?? 1"
+                    [value]="numValue(spec)"
+                    (valueChange)="setParam(spec.key, $event)"
+                  />
+                  <input
+                    class="fs-input num-input mono"
+                    type="number"
+                    [min]="spec.min ?? 0"
+                    [max]="spec.max ?? 100"
+                    [step]="spec.step ?? 1"
+                    [ngModel]="numValue(spec)"
+                    (ngModelChange)="setParam(spec.key, +$event)"
+                  />
+                </div>
+              }
+              @case ('enum') {
+                <fs-select
+                  [options]="enumOptions(spec)"
+                  [value]="strValue(spec)"
+                  (valueChange)="setParam(spec.key, $event)"
+                />
+              }
+              @case ('boolean') {
+                <fs-toggle
+                  [checked]="boolValue(spec)"
+                  [label]="spec.description || spec.label"
+                  (checkedChange)="setParam(spec.key, $event)"
+                />
+              }
+              @default {
+                <input
+                  class="fs-input"
+                  type="text"
+                  [ngModel]="strValue(spec)"
+                  (ngModelChange)="setParam(spec.key, $event)"
+                />
+              }
+            }
+
+            @if (spec.description && spec.type !== 'boolean') {
+              <span class="adv-desc">{{ spec.description }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

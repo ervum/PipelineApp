@@ -1,0 +1,56 @@
+<div class="prompt-diff">
+  <div class="prompt-diff__toolbar">
+    <div class="prompt-diff__legend">
+      <span class="stat-ins">+{{ stats().added }} words injected from vault</span>
+      @if (stats().removed > 0) {
+        <span class="stat-del">-{{ stats().removed }} words replaced</span>
+      }
+    </div>
+    <fs-segmented [options]="modeOptions" [(value)]="mode" ariaLabel="Diff mode" />
+  </div>
+
+  @if (mode() === 'inline') {
+    <div class="crd-diff">
+      @for (seg of segments(); track $index) {
+        @switch (seg.op) {
+          @case ('insert') {
+            <ins>{{ seg.text }}</ins>
+          }
+          @case ('delete') {
+            <del>{{ seg.text }}</del>
+          }
+          @default {
+            <span>{{ seg.text }}</span>
+          }
+        }
+      }
+    </div>
+  } @else {
+    <div class="prompt-diff__split">
+      <div class="split-col">
+        <div class="fs-label">Raw Input</div>
+        <div class="crd-diff">
+          @for (seg of segments(); track $index) {
+            @if (seg.op === 'delete') {
+              <del>{{ seg.text }}</del>
+            } @else if (seg.op === 'equal') {
+              <span>{{ seg.text }}</span>
+            }
+          }
+        </div>
+      </div>
+      <div class="split-col">
+        <div class="fs-label">Enhanced Output</div>
+        <div class="crd-diff">
+          @for (seg of segments(); track $index) {
+            @if (seg.op === 'insert') {
+              <ins>{{ seg.text }}</ins>
+            } @else if (seg.op === 'equal') {
+              <span>{{ seg.text }}</span>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

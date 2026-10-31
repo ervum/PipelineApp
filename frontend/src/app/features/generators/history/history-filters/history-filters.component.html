@@ -1,0 +1,44 @@
+@let f = gallery.filters();
+<div class="history-filters">
+  <div class="search-row">
+    <div class="search-box">
+      <fs-icon name="search" [size]="14" />
+      <input
+        type="search"
+        class="search-input"
+        placeholder="Search title, prompt, tags..."
+        [ngModel]="f.q"
+        (ngModelChange)="onSearchChange($event)"
+      />
+    </div>
+
+    <button
+      fsBtn
+      [variant]="f.favorite ? 'primary' : 'secondary'"
+      size="sm"
+      [icon]="f.favorite ? 'star-filled' : 'star'"
+      aria-label="Filter favorites"
+      (click)="toggleFavorites()"
+    ></button>
+  </div>
+
+  <fs-segmented
+    [options]="approvalOptions"
+    [value]="approvalValue()"
+    (valueChange)="onApprovalChange($event)"
+  />
+
+  <div class="selects-row">
+    <fs-select
+      [options]="tierOptions"
+      [value]="tierValue()"
+      (valueChange)="onTierChange($event)"
+    />
+
+    <fs-select
+      [options]="sortOptions"
+      [value]="f.sort"
+      (valueChange)="onSortChange($event)"
+    />
+  </div>
+</div>

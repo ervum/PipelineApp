@@ -1,0 +1,154 @@
+@use 'sass:map';
+@use 'styles' as *;
+
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+}
+
+.select-root {
+  position: relative;
+  width: 100%;
+}
+
+.select-trigger {
+  @include interactive-reset;
+  @include focus-ring;
+  @include disabled;
+  width: 100%;
+  height: 32px;
+  padding: 0 space(3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+  color: text-c('primary');
+  @include text('base', 'regular', 'tight');
+
+  &:hover:not(:disabled) {
+    border-color: border-c('strong');
+  }
+
+  &.is-open {
+    border-color: border-c('focus');
+  }
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  &__label {
+    @include truncate(1);
+  }
+
+  &__placeholder {
+    color: text-c('muted');
+    @include truncate(1);
+  }
+}
+
+.select-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: z('dropdown');
+  background: surface('elevated');
+  border: 1px solid border-c('strong');
+  border-radius: radius('md');
+  box-shadow: map.get($shadow, 'lg');
+  overflow: hidden;
+  animation: fs-scale-in dur('fast') ease('emphasized') both;
+}
+
+.select-search {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+  padding: space(2);
+  @include hairline('bottom');
+  color: text-c('muted');
+
+  .fs-input {
+    height: 28px;
+  }
+}
+
+.select-options {
+  max-height: 240px;
+  padding: space(1);
+  @include scroll-y;
+}
+
+.select-option {
+  @include interactive-reset;
+  @include disabled;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: space('1.5') space(2);
+  border-radius: radius('sm');
+  text-align: left;
+
+  &.is-highlighted {
+    background: surface('overlay');
+  }
+
+  &.is-selected {
+    background: accent-alpha('violet', 0.16);
+    color: text-c('primary');
+  }
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+  }
+
+  &__label {
+    flex: 1 1 auto;
+    @include text('sm', 'medium', 'tight');
+    @include truncate(1);
+  }
+
+  &__desc {
+    @include text('xs', 'regular', 'snug');
+    color: text-c('muted');
+  }
+}
+
+.select-empty {
+  padding: space(3);
+  text-align: center;
+  @include text('xs', 'regular', 'tight');
+  color: text-c('muted');
+}
+
+.health-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: text-c('muted');
+  flex: none;
+
+  &[data-health='HEALTHY'] {
+    background: accent('emerald');
+  }
+  &[data-health='DEGRADED'] {
+    background: accent('amber');
+  }
+  &[data-health='UNREACHABLE'],
+  &[data-health='UNAUTHORIZED'] {
+    background: accent('coral');
+  }
+}

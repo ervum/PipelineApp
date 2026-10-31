@@ -1,0 +1,55 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.history-filters {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  padding: space(2.5) space(3);
+  border-bottom: 1px solid border-c('subtle');
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+  padding: 0 space(2.5);
+  height: 30px;
+  background: surface('sunken');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+  color: text-c('muted');
+
+  &:focus-within {
+    border-color: accent('violet');
+  }
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: text-c('primary');
+  font-size: fs('xs');
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.selects-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: space(1.5);
+}

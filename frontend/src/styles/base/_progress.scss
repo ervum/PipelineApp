@@ -1,0 +1,38 @@
+@use 'styles/functions' as f;
+
+.fs-progress {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: f.surface('sunken');
+  border-radius: f.radius('pill');
+  overflow: hidden;
+
+  &__bar {
+    height: 100%;
+    width: calc(var(--value, 0) * 1%);
+    background: f.accent('violet');
+    border-radius: inherit;
+    transition: width f.dur('base') f.ease('standard');
+  }
+
+  &--indeterminate .fs-progress__bar {
+    width: 40%;
+    animation: fs-indeterminate 1.2s f.ease('standard') infinite;
+  }
+
+  &--cyan .fs-progress__bar { background: f.accent('cyan'); }
+  &--emerald .fs-progress__bar { background: f.accent('emerald'); }
+  &--amber .fs-progress__bar { background: f.accent('amber'); }
+  &--coral .fs-progress__bar { background: f.accent('coral'); }
+}
+
+.fs-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid f.border-c('strong');
+  border-top-color: f.accent('violet');
+  border-radius: 50%;
+  animation: fs-spin 0.7s linear infinite;
+}

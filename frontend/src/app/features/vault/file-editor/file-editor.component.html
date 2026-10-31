@@ -1,0 +1,88 @@
+@if (vault.openFile(); as file) {
+  <div class="file-editor">
+    <header class="file-editor__header">
+      <div class="file-editor__title">
+        <button
+          type="button"
+          fsBtn
+          variant="ghost"
+          size="sm"
+          (click)="closeEditor.emit()"
+        >
+          ← Back
+        </button>
+
+        @if (editingName()) {
+          <input
+            type="text"
+            class="fs-input name-input"
+            [value]="nameDraft()"
+            (input)="nameDraft.set($any($event.target).value)"
+            (blur)="commitRename(file)"
+            (keydown.enter)="commitRename(file)"
+          />
+        } @else {
+          <button type="button" class="file-title-btn" (click)="startRename(file)">
+            <span class="fs-h4">{{ file.name }}</span>
+            <fs-icon name="edit" [size]="12" />
+          </button>
+        }
+
+        @if (vault.isDirty()) {
+          <span class="dirty-dot" title="Unsaved changes"></span>
+        }
+      </div>
+
+      <div class="file-editor__meta">
+        <span class="fs-micro">
+          Used by Middleman for:
+          @for (s of file.scopes; track s) {
+            <span class="fs-badge">{{ scopeLabels[s] }}</span>
+          } @empty {
+            <span>Pinned only</span>
+          }
+        </span>
+        <span class="fs-mono fs-micro">~{{ liveTokens() }} tokens</span>
+        <button
+          type="button"
+          fsBtn
+          variant="primary"
+          size="sm"
+          icon="vault-save"
+          [disabled]="!vault.isDirty()"
+          [loading]="vault.saving()"
+          (click)="vault.saveDraft()"
+        >
+          Save (Ctrl+S)
+        </button>
+      </div>
+    </header>
+
+    <div class="file-editor__body">
+      <fs-split-pane persistKey="vault-editor">
+        <div paneLeft class="editor-pane">
+          <textarea
+            #editorArea
+            spellcheck="false"
+            [value]="vault.draftContent()"
+            (input)="vault.draftContent.set($any($event.target).value)"
+            (keydown)="onKeyDown($event)"
+          ></textarea>
+        </div>
+        <div paneRight class="preview-pane">
+          @switch (file.kind) {
+            @case ('MARKDOWN') {
+              <fs-markdown-preview [content]="vault.draftContent()" />
+            }
+            @case ('JSON') {
+              <fs-json-tree-view [content]="vault.draftContent()" />
+            }
+            @default {
+              <pre class="plain-text-preview">{{ vault.draftContent() }}</pre>
+            }
+          }
+        </div>
+      </fs-split-pane>
+    </div>
+  </div>
+}

@@ -1,0 +1,10 @@
+<div
+  [class]="classes()"
+  role="progressbar"
+  [attr.aria-valuenow]="value() ?? undefined"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  [style.--value]="clampedValue()"
+>
+  <div class="fs-progress__bar"></div>
+</div>

@@ -1,0 +1,23 @@
+{
+  "name": "@forge/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json','{\\\"type\\\":\\\"commonjs\\\"}');require('fs').writeFileSync('dist/esm/package.json','{\\\"type\\\":\\\"module\\\"}')\"",
+    "watch": "tsc -p tsconfig.esm.json --watch --preserveWatchOutput",
+    "test": "jest"
+  },
+  "dependencies": { "zod": "^3.25.0" },
+  "devDependencies": { "rimraf": "^6", "jest": "^30", "ts-jest": "^29", "@types/jest": "^30" }
+}

@@ -1,0 +1,164 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Generation Mode</label>
+    <fs-segmented
+      [options]="subModeOptions"
+      [value]="params().subMode"
+      (valueChange)="onSubModeChange($event)"
+    />
+  </div>
+
+  @if (params().subMode === 'IMAGE_TO_VIDEO') {
+    <div class="ref-conditioning-box">
+      <fs-reference-slot
+        label="Start Frame / Conditioning Image"
+        [storageKey]="params().referenceStorageKey"
+        (storageKeyChange)="patch({ referenceStorageKey: $event })"
+      />
+      @if (errors()['referenceStorageKey']; as err) {
+        <span class="fs-field__error">{{ err }}</span>
+      }
+    </div>
+  }
+
+  <div class="fs-field">
+    <label class="fs-label">Video Category</label>
+    <fs-select
+      [options]="categoryOptions"
+      [value]="params().videoCategory"
+      (valueChange)="$event && patch({ videoCategory: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Aspect Ratio & Frame Dimensions</label>
+    <div class="aspect-grid" role="radiogroup" aria-label="Video aspect ratio">
+      @for (tile of aspectTiles(); track tile.id) {
+        <button
+          type="button"
+          role="radio"
+          class="aspect-tile"
+          [class.is-active]="params().aspectRatio === tile.id"
+          [attr.aria-checked]="params().aspectRatio === tile.id"
+          (click)="patch({ aspectRatio: tile.id })"
+        >
+          <span class="aspect-tile__label">{{ tile.label }}</span>
+          <span class="aspect-tile__dims mono">{{ tile.dims }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Resolution Tier</label>
+      <fs-segmented
+        [options]="resolutionOptions"
+        [value]="params().resolution"
+        (valueChange)="patch({ resolution: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-label">Frame Rate</label>
+      <fs-segmented
+        [options]="fpsOptions"
+        [value]="params().fps"
+        (valueChange)="patch({ fps: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <fs-slider
+        label="Clip Duration"
+        [min]="2"
+        [max]="16"
+        [step]="1"
+        [value]="params().durationSec"
+        [format]="formatSec"
+        (valueChange)="patch({ durationSec: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <fs-slider
+        label="Motion Intensity"
+        [min]="0"
+        [max]="1"
+        [step]="0.05"
+        [value]="params().motionIntensity"
+        [format]="formatFloat"
+        (valueChange)="patch({ motionIntensity: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Camera Trajectory</label>
+    <fs-select
+      [options]="cameraMotionOptions"
+      [value]="params().cameraMotion"
+      (valueChange)="$event && patch({ cameraMotion: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <fs-toggle
+      label="Seamless Loopable Clip (Menu Background / Ambient VFX)"
+      [checked]="params().loopable"
+      (checkedChange)="patch({ loopable: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">VRAM / 32GB DDR5 System RAM Offload Policy</label>
+    <fs-select
+      [options]="memoryStrategyOptions"
+      [value]="params().memoryStrategy"
+      (valueChange)="$event && patch({ memoryStrategy: $event })"
+    />
+    @if (params().memoryStrategy === 'RAM_FALLBACK_32GB') {
+      <div class="ram-badge">
+        <span class="ram-badge__dot"></span>
+        <span>
+          <strong>32GB DDR5 System RAM Fallback Active:</strong>
+          T5 text encoder & temporal transformer blocks offload to pinned host RAM (24GB pool) with
+          tiled VAE decode when GPU VRAM fills.
+        </span>
+      </div>
+    }
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

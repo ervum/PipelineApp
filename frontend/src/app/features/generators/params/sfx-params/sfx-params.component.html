@@ -1,0 +1,92 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Sound Effect Category</label>
+    <fs-select
+      [options]="categoryOptions"
+      [value]="params().sfxCategory"
+      (valueChange)="$event && patch({ sfxCategory: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <fs-slider
+      label="Duration"
+      [min]="0.5"
+      [max]="22"
+      [step]="0.1"
+      [value]="params().durationSec"
+      [format]="formatSec"
+      (valueChange)="patch({ durationSec: $event })"
+    />
+
+    <fs-slider
+      label="Prompt Influence"
+      [min]="0"
+      [max]="1"
+      [step]="0.05"
+      [value]="params().promptInfluence"
+      [format]="formatPct"
+      (valueChange)="patch({ promptInfluence: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <fs-slider
+      label="Variations (1–8)"
+      [min]="1"
+      [max]="8"
+      [step]="1"
+      [value]="params().variationCount"
+      [format]="formatInt"
+      (valueChange)="patch({ variationCount: $event })"
+    />
+
+    <div class="loop-toggle-wrap">
+      <fs-toggle
+        label="Seamless Loopable Foley"
+        [checked]="params().loopable"
+        (checkedChange)="patch({ loopable: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Output Format</label>
+    <fs-segmented
+      [options]="formatOptions"
+      [value]="params().outputFormat"
+      (valueChange)="patch({ outputFormat: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

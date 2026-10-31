@@ -1,0 +1,30 @@
+<div class="chip-box">
+  @for (tag of values(); track tag) {
+    <span class="chip-item">
+      <span>{{ tag }}</span>
+      <button type="button" class="chip-remove" [attr.aria-label]="'Remove ' + tag" (click)="removeChip(tag)">
+        <fs-icon name="x" [size]="12" />
+      </button>
+    </span>
+  }
+  @if (values().length < max()) {
+    <input
+      type="text"
+      class="chip-input-el"
+      [placeholder]="values().length === 0 ? placeholder() : ''"
+      [value]="draft()"
+      (input)="onInput($event)"
+      (keydown)="onKeyDown($event)"
+      (blur)="addChip(draft())"
+    />
+  }
+</div>
+@if (suggestions().length > 0) {
+  <div class="chip-suggestions">
+    @for (s of suggestions(); track s) {
+      @if (!values().includes(s)) {
+        <button type="button" class="chip-suggestion" (click)="addChip(s)">+ {{ s }}</button>
+      }
+    }
+  </div>
+}

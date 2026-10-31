@@ -1,0 +1,36 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.voice-cast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+
+  &__list {
+    padding: space(4);
+    @include scroll-y;
+    display: flex;
+    flex-direction: column;
+    gap: space(4);
+  }
+
+  &__editor {
+    width: 360px;
+    padding: space(4);
+    background: surface('raised');
+    @include hairline('left');
+    @include scroll-y;
+  }
+}
+
+.voice-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: space(3);
+}

@@ -1,0 +1,139 @@
+<div class="composer">
+  <header class="composer__header">
+    <div class="composer__title-row">
+      <div class="composer__modality">
+        <fs-icon [name]="meta().icon" [size]="18" />
+        <h2>{{ meta().label }}</h2>
+      </div>
+      @if (studio.activeProject(); as proj) {
+        <span class="project-badge">
+          <span class="project-dot" [style.background]="proj.accentHex"></span>
+          <span>{{ proj.name }}</span>
+        </span>
+      }
+    </div>
+    <p class="composer__desc">{{ meta().description }}</p>
+
+    <div class="composer__context-strip">
+      <span class="context-count">
+        <fs-icon name="database" [size]="13" />
+        <span>{{ contextFileCount() }} vault files in scope</span>
+      </span>
+      <button
+        type="button"
+        class="context-preview-link"
+        (click)="toggleContextPreview()"
+      >
+        {{ contextPreviewOpen() ? 'Hide context' : 'Preview context' }}
+      </button>
+    </div>
+
+    @if (contextPreviewOpen()) {
+      <div class="context-preview-popover fs-card">
+        @if (contextPreviewLoading()) {
+          <p class="preview-loading">Assembling vault context preview…</p>
+        } @else if (contextPreviewData(); as cp) {
+          <div class="cp-header">
+            <span>Token Budget</span>
+            <span class="mono">{{ cp.totalTokens }} / {{ cp.budget }} tok</span>
+          </div>
+          <fs-progress [value]="contextBudgetPct()" accent="cyan" />
+
+          <div class="cp-section">
+            <span class="cp-section-title">Included ({{ cp.included.length }})</span>
+            @for (ref of cp.included; track ref.fileId) {
+              <div class="cp-row">
+                <span class="cp-name">{{ ref.fileName }}</span>
+                <span class="fs-badge fs-badge--neutral">{{ ref.reason }}</span>
+                <span class="mono">{{ ref.tokens }} tok</span>
+              </div>
+            } @empty {
+              <span class="cp-empty">No vault files matched scope.</span>
+            }
+          </div>
+
+          @if (cp.dropped.length > 0) {
+            <div class="cp-section">
+              <span class="cp-section-title">Dropped over budget ({{ cp.dropped.length }})</span>
+              @for (ref of cp.dropped; track ref.fileId) {
+                <div class="cp-row is-dropped">
+                  <span class="cp-name">{{ ref.fileName }}</span>
+                  <span class="mono">{{ ref.tokens }} tok</span>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+  </header>
+
+  <div class="composer__body">
+    <fs-prompt-input
+      [modality]="modality()"
+      [(value)]="rawPrompt"
+      (pinFile)="onPinFromMention($event)"
+      (generate)="generate.emit()"
+      (compileFirst)="compileFirst.emit()"
+    />
+
+    <fs-vault-pin-picker [(pinnedFileIds)]="pinnedFileIds" />
+
+    <div class="composer__routing">
+      <fs-provider-selector
+        [modality]="modality()"
+        [(providerId)]="providerId"
+        [(providerModel)]="providerModel"
+      />
+
+      <fs-middleman-selector
+        [(profileId)]="middlemanProfileId"
+        [(skipMiddleman)]="skipMiddleman"
+      />
+
+      <fs-execution-mode-toggle [(mode)]="executionMode" />
+    </div>
+
+    <div class="composer__params-slot">
+      @if (isGoogleWebProvider()) {
+        <fs-google-web-run-settings
+          [modality]="modality()"
+          [(providerModel)]="providerModel"
+          [(params)]="params"
+        />
+      }
+      <ng-content select="[modalityParams]" />
+      <ng-content select="[advancedParams]" />
+    </div>
+  </div>
+
+  <footer class="composer__footer">
+    <div class="cost-row">
+      <span>Estimated Run Cost</span>
+      <span class="mono">{{ estimatedCostText() }}</span>
+    </div>
+    <div class="action-buttons">
+      <button
+        fsBtn
+        variant="secondary"
+        icon="sparkles"
+        class="compile-btn"
+        [disabled]="!canSubmit() || submitting()"
+        (click)="compileFirst.emit()"
+      >
+        Compile Prompt First
+      </button>
+      <button
+        fsBtn
+        variant="primary"
+        icon="bolt"
+        class="generate-btn"
+        [loading]="submitting()"
+        [disabled]="!canSubmit()"
+        (click)="generate.emit()"
+      >
+        {{ batchCount() > 1 ? 'Generate ×' + batchCount() : 'Generate' }}
+      </button>
+    </div>
+  </footer>
+</div>

@@ -1,0 +1,236 @@
+<div class="profiles-layout">
+  <aside class="profiles-sidebar">
+    <div class="profiles-sidebar-header">
+      <div>
+        <h3 class="profiles-title">Middleman Profiles</h3>
+        <p class="profiles-sub">LLM prompt enhancer &amp; vision analyzer profiles</p>
+      </div>
+      <button fsBtn variant="primary" size="sm" icon="plus" (click)="startCreate()">
+        New Profile
+      </button>
+    </div>
+
+    <div class="profiles-list">
+      @for (p of providerState.profiles(); track p.id) {
+        <div
+          class="profile-card fs-card fs-card--interactive"
+          [class.is-selected]="selectedProfileId() === p.id && !isCreating()"
+          (click)="selectProfile(p)"
+        >
+          <div class="profile-card__top">
+            <span class="profile-card__name">{{ p.name }}</span>
+            <fs-tier-badge [tier]="p.tier" />
+          </div>
+          <div class="profile-card__meta">
+            <span class="mono">{{ p.providerName }} · {{ p.model }}</span>
+          </div>
+          <div class="profile-card__stats">
+            <span>Temp {{ p.temperature }}</span>
+            <span>·</span>
+            <span>Ctx {{ p.maxContextTokens }} tok</span>
+            <span>·</span>
+            <span>Out {{ p.maxOutputTokens }} tok</span>
+          </div>
+          <div class="profile-card__badges">
+            @if (p.supportsVision) {
+              <span class="fs-badge fs-badge--info">Vision ({{ p.maxReferenceImages }} img)</span>
+            }
+            @if (p.jsonMode) {
+              <span class="fs-badge fs-badge--neutral">JSON Mode</span>
+            }
+          </div>
+          <div class="profile-card__radios">
+            <label class="radio-chip" [class.is-active]="p.isDefault" (click)="setDefaultProfile(p, $event)">
+              <input type="radio" name="defaultProfile" [checked]="p.isDefault" />
+              <span>Default Compiler</span>
+            </label>
+            <label class="radio-chip" [class.is-active]="p.isVisionDefault" (click)="setVisionDefaultProfile(p, $event)">
+              <input type="radio" name="visionDefaultProfile" [checked]="p.isVisionDefault" />
+              <span>Default Vision</span>
+            </label>
+          </div>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <section class="profiles-editor">
+    <div class="editor-card fs-card">
+      <div class="editor-header">
+        <h4>{{ isCreating() ? 'Create Middleman Profile' : 'Edit Profile: ' + name() }}</h4>
+        @if (!isCreating() && selectedProfileId()) {
+          <button fsBtn variant="danger" size="sm" icon="trash" (click)="deleteSelected()">
+            Delete
+          </button>
+        }
+      </div>
+
+      <div class="editor-grid">
+        <div class="fs-field">
+          <label class="fs-label">Profile Name</label>
+          <input
+            class="fs-input"
+            type="text"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+            placeholder="e.g. Gemini 3.8 Flash Compiler"
+          />
+          @if (fieldErrors()['name']) {
+            <span class="fs-error">{{ fieldErrors()['name'] }}</span>
+          }
+        </div>
+
+        <div class="fs-field">
+          <label class="fs-label">LLM Provider</label>
+          <fs-select
+            [options]="llmProviderOptions()"
+            [value]="providerConfigId()"
+            (valueChange)="onProviderChange($event)"
+            placeholder="Select LLM provider..."
+          />
+          @if (fieldErrors()['providerConfigId']) {
+            <span class="fs-error">{{ fieldErrors()['providerConfigId'] }}</span>
+          }
+        </div>
+
+        <div class="fs-field">
+          <label class="fs-label">Model Identifier</label>
+          <input
+            class="fs-input mono"
+            type="text"
+            [ngModel]="model()"
+            (ngModelChange)="model.set($event)"
+            placeholder="e.g. gemini-3.8-flash"
+          />
+          @if (fieldErrors()['model']) {
+            <span class="fs-error">{{ fieldErrors()['model'] }}</span>
+          }
+        </div>
+
+        <div class="fs-field">
+          <fs-slider
+            label="Temperature"
+            [min]="0"
+            [max]="1.5"
+            [step]="0.05"
+            [(value)]="temperature"
+            [format]="formatTemp"
+          />
+        </div>
+
+        <div class="fs-field">
+          <fs-slider
+            label="Max Context Budget (tokens)"
+            [min]="1000"
+            [max]="64000"
+            [step]="500"
+            [(value)]="maxContextTokens"
+            [format]="formatInt"
+          />
+        </div>
+
+        <div class="fs-field">
+          <fs-slider
+            label="Max Output Budget (tokens)"
+            [min]="256"
+            [max]="8192"
+            [step]="128"
+            [(value)]="maxOutputTokens"
+            [format]="formatInt"
+          />
+        </div>
+      </div>
+
+      <div class="editor-toggles">
+        <fs-toggle [(checked)]="supportsVision" label="Supports Multimodal Vision" />
+        <fs-toggle [(checked)]="attachReferenceImages" label="Attach Vault Reference Images" />
+        <fs-toggle [(checked)]="jsonMode" label="Enforce Structured JSON Schema" />
+        <fs-toggle [(checked)]="isDefault" label="Default Compiler Profile" />
+        <fs-toggle [(checked)]="isVisionDefault" label="Default Vision Analysis Profile" />
+      </div>
+
+      @if (attachReferenceImages()) {
+        <div class="fs-field max-images-field">
+          <fs-slider
+            label="Max Attached Reference Images"
+            [min]="0"
+            [max]="8"
+            [step]="1"
+            [(value)]="maxReferenceImages"
+            [format]="formatInt"
+          />
+        </div>
+      }
+
+      <div class="editor-footer">
+        <button
+          fsBtn
+          variant="primary"
+          icon="check"
+          [loading]="saving()"
+          (click)="save()"
+        >
+          {{ isCreating() ? 'Create Profile' : 'Save Profile' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="test-compile-card fs-card">
+      <div class="test-compile-header">
+        <div>
+          <h4>Test Compile with Active Project Vault</h4>
+          <p class="test-sub">
+            Run a stateless compile preview against
+            <strong>{{ studio.activeProject()?.name ?? 'No project selected' }}</strong>
+            to inspect context assembly and prompt expansion.
+          </p>
+        </div>
+        <button
+          fsBtn
+          variant="ai"
+          icon="sparkles"
+          [loading]="testingCompile()"
+          (click)="runTestCompile()"
+        >
+          Test Compile
+        </button>
+      </div>
+
+      <div class="test-controls">
+        <div class="fs-field">
+          <label class="fs-label">Modality</label>
+          <fs-select
+            [options]="modalityOptions"
+            [(value)]="testModality"
+          />
+        </div>
+        <div class="fs-field test-prompt-field">
+          <label class="fs-label">Sample Raw Prompt</label>
+          <input
+            class="fs-input"
+            type="text"
+            [ngModel]="testRawPrompt()"
+            (ngModelChange)="testRawPrompt.set($event)"
+          />
+        </div>
+      </div>
+
+      @if (testResult(); as res) {
+        <div class="test-result">
+          <div class="test-result-meta">
+            <span class="fs-badge fs-badge--ai">{{ res.compiled.assetTitle }}</span>
+            <span class="mono">
+              {{ res.contextFiles.length }} vault files included · {{ res.usage.inputTokens }} in /
+              {{ res.usage.outputTokens }} out tokens · {{ res.usage.latencyMs }} ms
+            </span>
+          </div>
+
+          <fs-prompt-diff
+            [before]="testRawPrompt()"
+            [after]="res.compiled.enhancedPrompt"
+          />
+        </div>
+      }
+    </div>
+  </section>
+</div>

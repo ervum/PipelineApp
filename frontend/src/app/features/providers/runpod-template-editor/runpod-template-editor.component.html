@@ -1,0 +1,69 @@
+<div class="runpod-tpl-editor">
+  <div class="var-palette">
+    <div class="fs-spread">
+      <span class="fs-label">TEMPLATE VARIABLE CHIPS (CLICK TO INSERT AT CARET)</span>
+      <button
+        type="button"
+        class="vars-toggle"
+        (click)="showVarsEditor.set(!showVarsEditor())"
+      >
+        {{ showVarsEditor() ? 'Hide Sample Variables' : 'Edit Sample Variables' }}
+      </button>
+    </div>
+    <div class="var-chips">
+      @for (v of variableChips; track v) {
+        <button type="button" class="var-chip" (click)="insertVariable(v)">
+          {{ '{{' + v + '}}' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (showVarsEditor()) {
+    <div class="sample-vars-drawer">
+      <span class="fs-label">SAMPLE INTERPOLATION VARIABLES</span>
+      <fs-json-editor [(value)]="sampleVarsText" />
+    </div>
+  }
+
+  <div class="tpl-columns">
+    <div class="tpl-col">
+      <div class="fs-spread">
+        <span class="fs-label">PAYLOAD TEMPLATE JSON</span>
+        @if (!parsed().ok) {
+          <span class="fs-text-coral fs-micro">Invalid JSON</span>
+        }
+      </div>
+      <fs-json-editor #tplEditor [(value)]="templateText" [variables]="variableChips" />
+    </div>
+
+    <div class="tpl-col">
+      <div class="fs-spread">
+        <span class="fs-label fs-text-cyan">LIVE INTERPOLATED PREVIEW (TYPE-PRESERVING)</span>
+        @if (preview(); as prev) {
+          <div class="fs-cluster">
+            <span class="fs-badge">{{ prev.used.length }} vars bound</span>
+            @if (prev.missing.length > 0) {
+              <span class="fs-badge" style="color: var(--fs-accent-amber)">
+                {{ prev.missing.length }} missing
+              </span>
+            }
+          </div>
+        }
+      </div>
+      <div class="preview-code-box">
+        <fs-code-view [code]="previewJson()" language="JSON" />
+      </div>
+      @if (preview(); as prev) {
+        @if (prev.missing.length > 0) {
+          <div class="missing-vars">
+            Missing variables:
+            @for (m of prev.missing; track m) {
+              <code>{{ '{{' + m + '}}' }}</code>
+            }
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

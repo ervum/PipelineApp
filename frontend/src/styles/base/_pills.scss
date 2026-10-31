@@ -1,0 +1,35 @@
+@use 'styles/tokens' as t;
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: f.space('1.5');
+  height: 22px;
+  padding: 0 f.space(2);
+  border-radius: f.radius('pill');
+  @include m.text('2xs', 'semibold', 'tight');
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &__dot {
+    @include m.status-dot('emerald', false);
+  }
+
+  @each $status, $acc in t.$status-accent {
+    &--#{$status} {
+      @include m.tinted($acc);
+
+      .fs-status-pill__dot {
+        $pulse: $status == 'COMPILING' or $status == 'COLD_START' or $status == 'RUNNING' or $status == 'INGESTING';
+        @include m.status-dot($acc, $pulse);
+      }
+    }
+  }
+
+  &--COMPILING {
+    @include m.ai-stream-border('pill');
+  }
+}

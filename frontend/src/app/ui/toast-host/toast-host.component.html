@@ -1,0 +1,21 @@
+<div class="toast-stack" aria-live="polite" aria-atomic="false">
+  @for (t of toastService.toasts(); track t.id) {
+    <div class="toast-item" [attr.data-kind]="t.kind" role="status">
+      <fs-icon [name]="iconFor(t.kind)" [size]="16" />
+      <div class="toast-body">
+        @if (t.title) {
+          <div class="toast-title">{{ t.title }}</div>
+        }
+        <div class="toast-msg">{{ t.message }}</div>
+      </div>
+      <button
+        type="button"
+        class="toast-close"
+        aria-label="Dismiss notification"
+        (click)="toastService.dismiss(t.id)"
+      >
+        <fs-icon name="x" [size]="14" />
+      </button>
+    </div>
+  }
+</div>

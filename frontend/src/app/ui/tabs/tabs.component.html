@@ -1,0 +1,42 @@
+<div class="fs-tabs" role="tablist">
+  @if (tabs().length > 0) {
+    @for (t of tabs(); track t.id) {
+      <button
+        type="button"
+        role="tab"
+        class="fs-tab"
+        [attr.aria-selected]="active() === t.id"
+        [disabled]="t.disabled ?? false"
+        (click)="selectTab(t.id, t.disabled)"
+      >
+        @if (t.icon) {
+          <fs-icon [name]="t.icon" [size]="14" />
+        }
+        <span>{{ t.label }}</span>
+        @if (t.badge !== undefined && t.badge !== null) {
+          <span class="fs-badge fs-badge--count">{{ t.badge }}</span>
+        }
+      </button>
+    }
+  } @else {
+    @for (pt of projectedTabs(); track pt.id()) {
+      <button
+        type="button"
+        role="tab"
+        class="fs-tab"
+        [attr.aria-selected]="active() === pt.id()"
+        [disabled]="pt.disabled()"
+        (click)="selectTab(pt.id(), pt.disabled())"
+      >
+        @if (pt.icon(); as ic) {
+          <fs-icon [name]="ic" [size]="14" />
+        }
+        <span>{{ pt.label() }}</span>
+        @if (pt.badge() !== null) {
+          <span class="fs-badge fs-badge--count">{{ pt.badge() }}</span>
+        }
+      </button>
+    }
+  }
+</div>
+<ng-content />

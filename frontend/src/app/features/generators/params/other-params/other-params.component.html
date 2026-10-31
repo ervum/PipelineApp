@@ -1,0 +1,203 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Specialized Generator Mode</label>
+    <div class="submode-tabs" role="tablist">
+      @for (tab of subModeTabs; track tab.id) {
+        <button
+          type="button"
+          class="submode-tab"
+          role="tab"
+          [attr.aria-selected]="params().subMode === tab.id"
+          [class.is-active]="params().subMode === tab.id"
+          (click)="setSubMode(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @switch (params().subMode) {
+    @case ('SPRITESHEET') {
+      <div class="params-grid-2">
+        <fs-slider
+          label="Frame Count"
+          [min]="2"
+          [max]="64"
+          [step]="1"
+          [value]="params().spritesheet.frameCount"
+          [format]="formatInt"
+          (valueChange)="patchSpritesheet({ frameCount: $event })"
+        />
+
+        <fs-slider
+          label="Grid Columns"
+          [min]="1"
+          [max]="8"
+          [step]="1"
+          [value]="params().spritesheet.columns"
+          [format]="formatInt"
+          (valueChange)="patchSpritesheet({ columns: $event })"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-label">Per-Frame Resolution</label>
+        <fs-segmented
+          [options]="frameSizeOptions"
+          [value]="params().spritesheet.frameSize"
+          (valueChange)="patchSpritesheet({ frameSize: $event })"
+        />
+      </div>
+
+      <div class="params-grid-2">
+        <div class="fs-field">
+          <label class="fs-label">Animation Type</label>
+          <fs-select
+            [options]="animationTypeOptions"
+            [value]="params().spritesheet.animationType"
+            (valueChange)="$event && patchSpritesheet({ animationType: $event })"
+          />
+        </div>
+
+        <fs-slider
+          label="Playback Rate"
+          [min]="4"
+          [max]="60"
+          [step]="1"
+          [value]="params().spritesheet.fps"
+          [format]="formatFps"
+          (valueChange)="patchSpritesheet({ fps: $event })"
+        />
+      </div>
+    }
+
+    @case ('VFX_TEXTURE') {
+      <div class="fs-field">
+        <label class="fs-label">VFX Texture Type</label>
+        <fs-select
+          [options]="vfxTypeOptions"
+          [value]="params().vfx.textureType"
+          (valueChange)="$event && patchVfx({ textureType: $event })"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-label">Output Resolution</label>
+        <fs-segmented
+          [options]="vfxResolutionOptions"
+          [value]="params().vfx.resolution"
+          (valueChange)="patchVfx({ resolution: $event })"
+        />
+      </div>
+
+      <div class="toggles-row">
+        <fs-toggle
+          label="Single-Channel Grayscale Mask"
+          [checked]="params().vfx.grayscale"
+          (checkedChange)="patchVfx({ grayscale: $event })"
+        />
+        <fs-toggle
+          label="Seamless Tileable UV"
+          [checked]="params().vfx.tileable"
+          (checkedChange)="patchVfx({ tileable: $event })"
+        />
+      </div>
+    }
+
+    @case ('SHADER_CODE') {
+      <div class="fs-field">
+        <label class="fs-label">Shader / VFX Script Language</label>
+        <fs-select
+          [options]="shaderLanguageOptions"
+          [value]="params().shader.language"
+          (valueChange)="$event && patchShader({ language: $event })"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-label">Target Engine Runtime</label>
+        <fs-segmented
+          [options]="targetEngineOptions"
+          [value]="params().shader.targetEngine"
+          (valueChange)="patchShader({ targetEngine: $event })"
+        />
+      </div>
+    }
+
+    @case ('LORE_JSON') {
+      <div class="params-grid-2">
+        <div class="fs-field">
+          <label class="fs-label">Structured Schema Preset</label>
+          <fs-select
+            [options]="schemaKindOptions"
+            [value]="params().loreJson.schemaKind"
+            (valueChange)="$event && patchLoreJson({ schemaKind: $event })"
+          />
+        </div>
+
+        <fs-slider
+          label="Entry Count"
+          [min]="1"
+          [max]="50"
+          [step]="1"
+          [value]="params().loreJson.entryCount"
+          [format]="formatInt"
+          (valueChange)="patchLoreJson({ entryCount: $event })"
+        />
+      </div>
+
+      <div class="fs-field">
+        <fs-toggle
+          label="Use Custom JSON Schema Override"
+          [checked]="customSchemaEnabled()"
+          (checkedChange)="toggleCustomSchema($event)"
+        />
+      </div>
+
+      @if (params().loreJson.customSchema !== null) {
+        <div class="fs-field">
+          <label class="fs-label">Custom JSON Schema Definition</label>
+          <fs-json-editor
+            [value]="params().loreJson.customSchema ?? '{}'"
+            (valueChange)="patchLoreJson({ customSchema: $event })"
+          />
+          @if (validationErrors()['loreJson.customSchema']) {
+            <span class="fs-error-text">{{ validationErrors()['loreJson.customSchema'] }}</span>
+          }
+        </div>
+      }
+    }
+  }
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,36 @@
+@use 'styles/tokens' as t;
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: f.space(1);
+  height: 20px;
+  padding: 0 f.space(2);
+  border-radius: f.radius('sm');
+  @include m.text('2xs', 'semibold', 'tight');
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  background: f.surface('elevated');
+  color: f.text-c('secondary');
+  border: 1px solid f.border-c('default');
+
+  @each $tier, $acc in t.$tier-accent {
+    &--tier-#{$tier} {
+      @include m.tinted($acc);
+    }
+  }
+
+  &--scope {
+    @include m.tinted('violet');
+  }
+
+  &--count {
+    @include m.mono('2xs');
+    min-width: 20px;
+    justify-content: center;
+    padding: 0 f.space('1.5');
+    border-radius: f.radius('pill');
+  }
+}

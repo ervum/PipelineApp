@@ -1,0 +1,47 @@
+@use 'styles' as *;
+
+:host {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%;
+  background: surface('raised');
+  @include hairline('right');
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+  padding: space(3) space(3);
+  @include text('md', 'bold', 'tight');
+
+  &__mark {
+    width: 28px;
+    height: 28px;
+    border-radius: radius('sm');
+    background: accent-alpha('violet', 0.2);
+    border: 1px solid accent-alpha('violet', 0.45);
+    color: accent('violet', '300');
+    @include center;
+    flex: none;
+  }
+
+  &__title {
+    flex: 1 1 auto;
+    letter-spacing: -0.02em;
+  }
+
+  &__collapse {
+    margin-left: auto;
+  }
+}
+
+.nav {
+  @include scroll-y;
+  padding: space(2) space(2) space(4);
+}
+
+.queue-slot {
+  padding: space(2);
+  @include hairline('top');
+}

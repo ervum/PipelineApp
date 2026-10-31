@@ -1,0 +1,130 @@
+@use 'sass:map';
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.prompt-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: space(1.5);
+}
+
+.prompt-input-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prompt-shortcut-hint {
+  font-size: fs('xs');
+  color: text-c('muted');
+
+  kbd {
+    padding: 1px 5px;
+    background: surface('elevated');
+    border: 1px solid border-c('default');
+    border-radius: 3px;
+    font-family: map.get($font-family, 'mono');
+    font-size: 11px;
+    color: text-c('secondary');
+  }
+}
+
+.prompt-textarea-box {
+  position: relative;
+}
+
+.prompt-textarea {
+  width: 100%;
+  min-height: 84px;
+  max-height: 260px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.mention-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: z('dropdown');
+  display: flex;
+  flex-direction: column;
+  padding: space(1);
+  background: surface('overlay');
+  border: 1px solid border-c('strong');
+  border-radius: radius('md');
+  box-shadow: map.get($shadow, 'lg');
+  max-height: 260px;
+  @include scroll-y;
+}
+
+.mention-option {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+  width: 100%;
+  padding: space(2) space(2);
+  background: transparent;
+  border: none;
+  border-radius: radius('sm');
+  text-align: left;
+  color: text-c('primary');
+  cursor: pointer;
+
+  &:hover,
+  &.is-active {
+    background: surface('elevated');
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: fs('xs');
+    font-weight: fw('semibold');
+    @include truncate;
+  }
+
+  &__path {
+    font-size: 11px;
+    color: text-c('muted');
+    @include truncate;
+  }
+
+  &__scopes {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+}
+
+.prompt-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: text-c('muted');
+}
+
+.kbd-hints kbd {
+  padding: 1px 4px;
+  background: surface('elevated');
+  border: 1px solid border-c('subtle');
+  border-radius: 3px;
+  font-family: map.get($font-family, 'mono');
+  font-size: 10px;
+  color: text-c('secondary');
+}
+
+.char-counter {
+  &.is-near-limit {
+    color: accent('amber');
+  }
+}

@@ -1,0 +1,97 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.params-panel {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+}
+
+.frame-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: space(1.5);
+}
+
+.frame-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: space(2) space(1);
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+  color: text-c('secondary');
+  font-size: 10px;
+  font-weight: fw('medium');
+  cursor: pointer;
+  transition:
+    border-color dur('fast') ease('standard'),
+    background dur('fast') ease('standard'),
+    color dur('fast') ease('standard');
+
+  &:hover {
+    border-color: border-c('strong');
+    color: text-c('primary');
+  }
+
+  &.is-active {
+    background: accent-alpha('violet', 0.14);
+    border-color: accent('violet');
+    color: text-c('primary');
+  }
+}
+
+.frame-svg {
+  width: 26px;
+  height: 26px;
+}
+
+.bg-row {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+}
+
+.color-picker-row {
+  display: flex;
+  flex-direction: column;
+  gap: space(1);
+}
+
+.color-inputs {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+}
+
+.color-swatch-input {
+  width: 34px;
+  height: 32px;
+  padding: 2px;
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('sm');
+  cursor: pointer;
+}
+
+.params-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: space(3);
+}
+
+.seed-row {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+
+  .fs-input {
+    flex: 1;
+  }
+}

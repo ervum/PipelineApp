@@ -1,0 +1,113 @@
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-markdown {
+  @include m.text('base', 'regular', 'relaxed');
+  color: f.text-c('primary');
+
+  h1, h2, h3, h4 {
+    margin: f.space(4) 0 f.space(2);
+    color: f.text-c('primary');
+    &:first-child { margin-top: 0; }
+  }
+
+  h1 { @include m.text('2xl', 'semibold', 'tight'); @include m.hairline('bottom'); padding-bottom: f.space(2); }
+  h2 { @include m.text('xl', 'semibold', 'tight'); }
+  h3 { @include m.text('lg', 'semibold', 'snug'); }
+  h4 { @include m.text('md', 'semibold', 'snug'); }
+
+  p {
+    margin: 0 0 f.space(3);
+    color: f.text-c('secondary');
+  }
+
+  ul, ol {
+    margin: 0 0 f.space(3);
+    padding-left: f.space(5);
+    color: f.text-c('secondary');
+
+    li {
+      margin-bottom: f.space(1);
+    }
+  }
+
+  code {
+    @include m.mono('xs');
+    padding: 2px 5px;
+    background: f.surface('overlay');
+    border: 1px solid f.border-c('subtle');
+    border-radius: f.radius('xs');
+    color: f.accent('cyan', '200');
+  }
+
+  pre {
+    margin: 0 0 f.space(3);
+    padding: f.space(3);
+    background: f.surface('sunken');
+    border: 1px solid f.border-c('subtle');
+    border-radius: f.radius('md');
+    overflow-x: auto;
+
+    code {
+      padding: 0;
+      background: none;
+      border: 0;
+      color: f.text-c('primary');
+    }
+  }
+
+  blockquote {
+    margin: 0 0 f.space(3);
+    padding: f.space(2) f.space(3);
+    border-left: 3px solid f.accent('cyan');
+    background: f.accent-alpha('cyan', 0.06);
+    border-radius: 0 f.radius('sm') f.radius('sm') 0;
+    color: f.text-c('secondary');
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 f.space(3);
+    @include m.text('sm', 'regular', 'snug');
+
+    th, td {
+      padding: f.space('1.5') f.space(3);
+      border: 1px solid f.border-c('default');
+      text-align: left;
+    }
+
+    th {
+      background: f.surface('overlay');
+      @include m.caps-label;
+    }
+  }
+
+  hr {
+    border: 0;
+    height: 1px;
+    background: f.border-c('default');
+    margin: f.space(4) 0;
+  }
+
+  .md-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 6px;
+    background: f.surface('overlay');
+    border: 1px solid f.border-c('default');
+    border-radius: f.radius('xs');
+    @include m.mono('xs');
+    color: f.text-c('primary');
+
+    &::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: var(--sw, #7C3AED);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+  }
+}

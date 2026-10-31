@@ -1,0 +1,28 @@
+@if (open()) {
+  <div
+    class="context-menu"
+    role="menu"
+    [style.left.px]="clampedX()"
+    [style.top.px]="clampedY()"
+    (click)="$event.stopPropagation()"
+  >
+    @for (item of items(); track item.id) {
+      @if (item.dividerBefore) {
+        <hr class="fs-divider" />
+      }
+      <button
+        type="button"
+        role="menuitem"
+        class="context-menu__item"
+        [class.is-danger]="item.danger ?? false"
+        [disabled]="item.disabled ?? false"
+        (click)="choose(item, $event)"
+      >
+        @if (item.icon) {
+          <fs-icon [name]="item.icon" [size]="14" />
+        }
+        <span>{{ item.label }}</span>
+      </button>
+    }
+  </div>
+}

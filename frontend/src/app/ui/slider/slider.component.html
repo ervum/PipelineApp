@@ -1,0 +1,24 @@
+<div class="slider-wrap">
+  @if (label()) {
+    <div class="slider-header">
+      <span class="slider-label">{{ label() }}</span>
+      <span class="slider-readout fs-num">{{ formattedValue() }}</span>
+    </div>
+  }
+  <div class="slider-row">
+    <input
+      type="range"
+      class="slider-input"
+      [min]="min()"
+      [max]="max()"
+      [step]="step()"
+      [value]="value()"
+      [disabled]="disabled()"
+      [attr.aria-label]="label() || 'Value slider'"
+      (input)="onInput($event)"
+    />
+    @if (!label()) {
+      <span class="slider-readout fs-num">{{ formattedValue() }}</span>
+    }
+  </div>
+</div>

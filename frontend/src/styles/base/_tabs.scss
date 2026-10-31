@@ -1,0 +1,81 @@
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-tabs {
+  display: flex;
+  align-items: center;
+  gap: f.space(1);
+  @include m.hairline('bottom');
+  padding: 0 f.space(2);
+}
+
+.fs-tab {
+  @include m.interactive-reset;
+  @include m.focus-ring;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: f.space('1.5');
+  height: 36px;
+  padding: 0 f.space(3);
+  color: f.text-c('secondary');
+  @include m.text('sm', 'medium', 'tight');
+  transition: color f.dur('fast') f.ease('standard');
+
+  &:hover {
+    color: f.text-c('primary');
+  }
+
+  &[aria-selected='true'] {
+    color: f.text-c('primary');
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: f.space(2);
+      right: f.space(2);
+      bottom: -1px;
+      height: 2px;
+      border-radius: f.radius('pill');
+      background: f.accent('violet');
+    }
+  }
+}
+
+.fs-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: f.surface('sunken');
+  border: 1px solid f.border-c('default');
+  border-radius: f.radius('md');
+
+  &__option {
+    @include m.interactive-reset;
+    @include m.focus-ring;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: f.space(1);
+    height: 26px;
+    padding: 0 f.space('2');
+    border-radius: f.radius('sm');
+    color: f.text-c('secondary');
+    @include m.text('xs', 'medium', 'tight');
+    transition:
+      background f.dur('fast') f.ease('standard'),
+      color f.dur('fast') f.ease('standard');
+
+    &:hover {
+      color: f.text-c('primary');
+    }
+
+    &[aria-checked='true'],
+    &.is-active {
+      background: f.surface('elevated');
+      color: f.text-c('primary');
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+  }
+}

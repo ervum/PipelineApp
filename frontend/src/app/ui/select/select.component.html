@@ -1,0 +1,77 @@
+<div class="select-root" (keydown)="onKeyDown($event)">
+  <button
+    type="button"
+    class="select-trigger"
+    [class.is-open]="isOpen()"
+    [disabled]="disabled()"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="isOpen()"
+    (click)="toggleOpen()"
+  >
+    @if (selectedOption(); as sel) {
+      <span class="select-trigger__content">
+        @if (sel.health) {
+          <span class="health-dot" [attr.data-health]="sel.health"></span>
+        }
+        <span class="select-trigger__label">{{ sel.label }}</span>
+        @if (sel.tier) {
+          <fs-tier-badge [tier]="sel.tier" />
+        } @else if (sel.badge) {
+          <span class="fs-badge">{{ sel.badge }}</span>
+        }
+      </span>
+    } @else {
+      <span class="select-trigger__placeholder">{{ placeholder() }}</span>
+    }
+    <fs-icon name="chevron-down" [size]="14" />
+  </button>
+
+  @if (isOpen()) {
+    <div class="select-popover" role="listbox">
+      @if (searchable()) {
+        <div class="select-search">
+          <fs-icon name="search" [size]="14" />
+          <input
+            type="text"
+            class="fs-input"
+            placeholder="Filter options…"
+            [value]="search()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+      }
+      <div class="select-options">
+        @for (opt of filteredOptions(); track opt.value; let i = $index) {
+          <button
+            type="button"
+            role="option"
+            class="select-option"
+            [class.is-highlighted]="i === highlightedIndex()"
+            [class.is-selected]="opt.value === value()"
+            [attr.aria-selected]="opt.value === value()"
+            [disabled]="opt.disabled ?? false"
+            (mouseenter)="highlightedIndex.set(i)"
+            (click)="selectOption(opt)"
+          >
+            <div class="select-option__main">
+              @if (opt.health) {
+                <span class="health-dot" [attr.data-health]="opt.health"></span>
+              }
+              <span class="select-option__label">{{ opt.label }}</span>
+              @if (opt.tier) {
+                <fs-tier-badge [tier]="opt.tier" />
+              } @else if (opt.badge) {
+                <span class="fs-badge">{{ opt.badge }}</span>
+              }
+            </div>
+            @if (opt.description) {
+              <div class="select-option__desc">{{ opt.description }}</div>
+            }
+          </button>
+        } @empty {
+          <div class="select-empty">No matching options</div>
+        }
+      </div>
+    </div>
+  }
+</div>

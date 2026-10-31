@@ -1,0 +1,696 @@
+<div class="provider-editor">
+  <header class="provider-editor__header">
+    <div class="fs-cluster">
+      <h2 class="fs-h3">{{ name() || 'New Provider' }}</h2>
+      <fs-tier-badge [tier]="tier()" />
+      <span class="fs-badge fs-mono">{{ kind() }}</span>
+    </div>
+    <fs-toggle label="Enabled" [(checked)]="isEnabled" />
+  </header>
+
+  <fs-tabs [tabs]="tabs()" [(active)]="activeTab" />
+
+  <div class="provider-editor__body">
+    @if (validationErrors().length > 0) {
+      <div class="validation-banner">
+        @for (err of validationErrors(); track err) {
+          <div>• {{ err }}</div>
+        }
+      </div>
+    }
+
+    @switch (activeTab()) {
+      @case ('connection') {
+        <div class="fs-stack">
+          <div class="fs-grid-2">
+            <div class="fs-field">
+              <label class="fs-field__label">Display Name</label>
+              <input
+                type="text"
+                class="fs-input"
+                [value]="name()"
+                (input)="name.set($any($event.target).value)"
+              />
+            </div>
+
+            @if (kind() === 'RUNPOD_SERVERLESS') {
+              <div class="fs-field">
+                <label class="fs-field__label">RunPod Endpoint ID</label>
+                <input
+                  type="text"
+                  class="fs-input fs-input--mono"
+                  placeholder="e.g. v2x9k4flux1dev"
+                  [value]="runpodEndpointId()"
+                  (input)="runpodEndpointId.set($any($event.target).value)"
+                />
+              </div>
+            } @else {
+              <div class="fs-field">
+                <label class="fs-field__label">
+                  <span>Base URL</span>
+                  @if (catalogEntry()?.defaultBaseUrl; as defUrl) {
+                    <span class="fs-micro fs-mono">{{ defUrl }}</span>
+                  }
+                </label>
+                <input
+                  type="url"
+                  class="fs-input fs-input--mono"
+                  placeholder="https://api.example.com"
+                  [value]="baseUrl()"
+                  (input)="baseUrl.set($any($event.target).value)"
+                />
+              </div>
+            }
+          </div>
+
+          @if (kind() === 'GOOGLE_WEB') {
+            <div class="fs-card fs-stack" style="padding: 16px; border: 1px solid var(--fs-border-subtle)">
+              <div class="fs-spread">
+                <div>
+                  <span class="fs-label">GOOGLE WEB & AI STUDIO BROWSER AUTOMATION</span>
+                  <p class="fs-micro" style="margin: 4px 0 0; opacity: 0.78">
+                    Single persistent Chromium context shared across Guest Mode, Signed-In Gemini Web, and Google AI Studio.
+                  </p>
+                </div>
+                <div class="fs-cluster">
+                  <button
+                    type="button"
+                    fsBtn
+                    variant="secondary"
+                    size="sm"
+                    icon="eye"
+                    (click)="toggleLiveBrowserVisibility()"
+                  >
+                    {{ state.browserVisible() ? 'Hide Browser Window' : 'Show Browser Window' }}
+                  </button>
+                  <button
+                    type="button"
+                    fsBtn
+                    variant="secondary"
+                    size="sm"
+                    (click)="openGoogleLogin('gemini')"
+                  >
+                    Sign In: Gemini Web
+                  </button>
+                  <button
+                    type="button"
+                    fsBtn
+                    variant="primary"
+                    size="sm"
+                    (click)="openGoogleLogin('aistudio')"
+                  >
+                    Sign In: AI Studio
+                  </button>
+                </div>
+              </div>
+
+              <div class="fs-grid-3">
+                <div class="fs-field">
+                  <label class="fs-field__label">Automation Mode</label>
+                  <select
+                    class="fs-select-native"
+                    [value]="settings().webAuthMode || 'aistudio'"
+                    (change)="onWebAuthModeChange($any($event.target).value)"
+                  >
+                    <option value="gemini_guest">1. Gemini Web (Guest Mode — No Sign-In)</option>
+                    <option value="gemini_auth">2. Gemini Web (Signed In)</option>
+                    <option value="aistudio">3. Google AI Studio (Signed In)</option>
+                  </select>
+                </div>
+
+                <div class="fs-field">
+                  <label class="fs-field__label">Browser Window Mode</label>
+                  <fs-toggle
+                    label="Always show browser window (disable headless)"
+                    [checked]="!(settings().browserHeadless ?? true)"
+                    (checkedChange)="patchSetting('browserHeadless', !$event)"
+                  />
+                </div>
+
+                <div class="fs-field">
+                  <label class="fs-field__label">Automatic Chat Cleanup</label>
+                  <fs-toggle
+                    label="Auto-delete created chats when task finishes"
+                    [checked]="settings().autoDeleteCreatedChats ?? false"
+                    (checkedChange)="patchSetting('autoDeleteCreatedChats', $event)"
+                  />
+                  <span class="fs-micro" style="opacity: 0.72">
+                    Only deletes chats created by PipelineApp; never touches personal chats.
+                  </span>
+                </div>
+              </div>
+
+              <div class="fs-spread" style="padding-top: 8px; border-top: 1px solid var(--fs-border-subtle)">
+                <div class="fs-cluster">
+                  <span class="fs-badge">
+                    Gemini Auth: {{ state.googleWebStatus()?.geminiAuthenticated ? 'Signed In' : 'Guest / Unchecked' }}
+                  </span>
+                  <span class="fs-badge">
+                    AI Studio Auth: {{ state.googleWebStatus()?.aiStudioAuthenticated ? 'Signed In' : 'Unchecked' }}
+                  </span>
+                  <span class="fs-badge fs-mono">
+                    Tracked Chats: {{ state.trackedWebChats().length }}
+                  </span>
+                </div>
+                <div class="fs-cluster">
+                  <button
+                    type="button"
+                    fsBtn
+                    variant="secondary"
+                    size="sm"
+                    icon="trash"
+                    [disabled]="state.trackedWebChats().length === 0"
+                    (click)="deleteLastRunWebChats()"
+                  >
+                    Delete All Chats (Last Run)
+                  </button>
+                </div>
+              </div>
+
+              @if (state.trackedWebChats().length > 0) {
+                <table class="fs-table">
+                  <thead>
+                    <tr>
+                      <th>Platform</th>
+                      <th>Model</th>
+                      <th>Role</th>
+                      <th>Prompt / Title</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (c of state.trackedWebChats().slice(0, 8); track c.id) {
+                      <tr>
+                        <td><span class="fs-badge fs-mono">{{ c.platform }}</span></td>
+                        <td><span class="fs-mono fs-micro">{{ c.modelId }}</span></td>
+                        <td><span class="fs-micro">{{ c.role }}</span></td>
+                        <td><span class="fs-micro">{{ c.chatTitle || c.externalChatId }}</span></td>
+                        <td>
+                          <button
+                            type="button"
+                            fsBtn
+                            variant="ghost"
+                            size="sm"
+                            icon="trash"
+                            (click)="deleteSingleWebChat(c.id)"
+                          >
+                            Delete Chat
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          } @else {
+          <div class="fs-field">
+            <label class="fs-field__label">
+              <span>{{ catalogEntry()?.secretLabel || 'API Key / Secret Token' }}</span>
+              <span class="fs-micro">Encrypted at rest with AES-256-GCM</span>
+            </label>
+            @if (provider()?.hasSecret && secretMode() === 'keep') {
+              <div class="fs-input-group">
+                <input
+                  type="password"
+                  class="fs-input fs-input--mono"
+                  [placeholder]="'••••••••••••' + (provider()?.secretLast4 || '')"
+                  disabled
+                />
+                <button
+                  type="button"
+                  fsBtn
+                  variant="secondary"
+                  size="sm"
+                  (click)="secretMode.set('replace')"
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  fsBtn
+                  variant="danger"
+                  size="sm"
+                  (click)="secretMode.set('clear')"
+                >
+                  Clear
+                </button>
+              </div>
+            } @else if (secretMode() === 'clear') {
+              <div class="fs-spread">
+                <span class="fs-text-amber fs-small">Secret will be cleared on Save.</span>
+                <button
+                  type="button"
+                  fsBtn
+                  variant="ghost"
+                  size="sm"
+                  (click)="secretMode.set(provider()?.hasSecret ? 'keep' : 'replace')"
+                >
+                  Undo
+                </button>
+              </div>
+            } @else {
+              <div class="fs-input-group">
+                <input
+                  type="password"
+                  class="fs-input fs-input--mono"
+                  placeholder="Paste API key or bearer token…"
+                  [value]="secretDraft()"
+                  (input)="secretDraft.set($any($event.target).value)"
+                />
+                @if (provider()?.hasSecret) {
+                  <button
+                    type="button"
+                    fsBtn
+                    variant="ghost"
+                    size="sm"
+                    (click)="secretMode.set('keep'); secretDraft.set('')"
+                  >
+                    Keep Existing
+                  </button>
+                }
+              </div>
+            }
+          </div>
+          }
+
+          <div class="fs-field">
+            <span class="fs-label">PROVIDER ROLES</span>
+            <div class="fs-cluster">
+              @for (r of allRoles; track r) {
+                <button
+                  type="button"
+                  class="check-chip"
+                  [class.is-active]="roles().includes(r)"
+                  (click)="toggleRole(r)"
+                >
+                  {{ r }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="fs-field">
+            <span class="fs-label">SUPPORTED MODALITIES & DEFAULT ROUTING</span>
+            <div class="modality-matrix">
+              @for (m of allModalities; track m) {
+                <div class="modality-matrix__row">
+                  <button
+                    type="button"
+                    class="check-chip"
+                    [class.is-active]="modalities().includes(m)"
+                    (click)="toggleModality(m)"
+                  >
+                    {{ modalityMeta[m].label }}
+                  </button>
+                  <button
+                    type="button"
+                    class="default-star-btn"
+                    [class.is-default]="defaultForModalities().includes(m)"
+                    (click)="toggleDefaultModality(m)"
+                  >
+                    <fs-icon
+                      [name]="defaultForModalities().includes(m) ? 'star-filled' : 'star'"
+                      [size]="13"
+                    />
+                    <span>Default</span>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="fs-field">
+            <div class="fs-spread">
+              <span class="fs-label">EXTRA HTTP HEADERS</span>
+              <button type="button" fsBtn variant="ghost" size="sm" icon="plus" (click)="addHeaderRow()">
+                Add Header
+              </button>
+            </div>
+            @for (h of extraHeaders(); track $index; let i = $index) {
+              <div class="fs-input-group">
+                <input
+                  type="text"
+                  class="fs-input fs-input--mono"
+                  placeholder="Header-Name"
+                  [value]="h.key"
+                  (input)="updateHeaderKey(i, $any($event.target).value)"
+                />
+                <input
+                  type="text"
+                  class="fs-input fs-input--mono"
+                  placeholder="Value"
+                  [value]="h.value"
+                  (input)="updateHeaderVal(i, $any($event.target).value)"
+                />
+                <button type="button" fsBtn variant="ghost" size="icon" (click)="removeHeaderRow(i)">
+                  <fs-icon name="trash" [size]="14" />
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @case ('models') {
+        <div class="fs-stack">
+          <div class="fs-spread">
+            <div class="fs-field" style="width: 280px">
+              <label class="fs-field__label">Default Model ID</label>
+              <select
+                class="fs-select-native"
+                [value]="defaultModel()"
+                (change)="defaultModel.set($any($event.target).value)"
+              >
+                <option value="">(None)</option>
+                @for (m of models(); track m.id) {
+                  <option [value]="m.id">{{ m.label }} ({{ m.id }})</option>
+                }
+              </select>
+            </div>
+            <div class="fs-cluster">
+              @if (catalogEntry()?.suggestedModels?.length) {
+                <button type="button" fsBtn variant="secondary" size="sm" (click)="addSuggestedModels()">
+                  + Add Suggested from Catalog
+                </button>
+              }
+              <button type="button" fsBtn variant="primary" size="sm" icon="plus" (click)="addModelRow()">
+                Add Model
+              </button>
+            </div>
+          </div>
+
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>Model ID</th>
+                <th>Display Label</th>
+                <th>Roles</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of models(); track $index; let i = $index) {
+                <tr>
+                  <td>
+                    <input
+                      type="text"
+                      class="fs-input fs-input--mono"
+                      [value]="m.id"
+                      (input)="updateModelId(i, $any($event.target).value)"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="fs-input"
+                      [value]="m.label"
+                      (input)="updateModelLabel(i, $any($event.target).value)"
+                    />
+                  </td>
+                  <td>
+                    <span class="fs-mono fs-micro">{{ m.roles.join(', ') }}</span>
+                  </td>
+                  <td>
+                    <button type="button" fsBtn variant="ghost" size="icon" (click)="removeModelRow(i)">
+                      <fs-icon name="trash" [size]="14" />
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @case ('payload') {
+        <fs-runpod-template-editor [(templateText)]="payloadTemplateText" />
+      }
+
+      @case ('mapping') {
+        <div class="fs-stack">
+          <div class="fs-spread">
+            <span class="fs-label">ASSET EXTRACTION RULES (JSONPATH DOT + [*] WILDCARD)</span>
+            <button type="button" fsBtn variant="secondary" size="sm" icon="plus" (click)="addMappingRow()">
+              Add Asset Rule
+            </button>
+          </div>
+
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>JSON Path</th>
+                <th>Encoding</th>
+                <th>MIME Type</th>
+                <th>File Role</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of assetMappings(); track $index; let i = $index) {
+                <tr>
+                  <td>
+                    <input
+                      type="text"
+                      class="fs-input fs-input--mono"
+                      [value]="m.path"
+                      (input)="patchMapping(i, { path: $any($event.target).value })"
+                    />
+                  </td>
+                  <td>
+                    <select
+                      class="fs-select-native"
+                      [value]="m.encoding"
+                      (change)="patchMapping(i, { encoding: $any($event.target).value })"
+                    >
+                      <option value="base64">base64</option>
+                      <option value="data_uri">data_uri</option>
+                      <option value="url">url</option>
+                      <option value="text">text</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="fs-input fs-input--mono"
+                      placeholder="image/png"
+                      [value]="m.mimeType || ''"
+                      (input)="patchMapping(i, { mimeType: $any($event.target).value || undefined })"
+                    />
+                  </td>
+                  <td>
+                    <select
+                      class="fs-select-native"
+                      [value]="m.role"
+                      (change)="patchMapping(i, { role: $any($event.target).value })"
+                    >
+                      @for (r of allFileRoles; track r) {
+                        <option [value]="r">{{ r }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td>
+                    <button type="button" fsBtn variant="ghost" size="icon" (click)="removeMappingRow(i)">
+                      <fs-icon name="trash" [size]="14" />
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <div class="fs-grid-3">
+            <div class="fs-field">
+              <label class="fs-field__label">Progress Path</label>
+              <input
+                type="text"
+                class="fs-input fs-input--mono"
+                [value]="progressPath()"
+                (input)="progressPath.set($any($event.target).value)"
+              />
+            </div>
+            <div class="fs-field">
+              <label class="fs-field__label">Error Path</label>
+              <input
+                type="text"
+                class="fs-input fs-input--mono"
+                [value]="errorPath()"
+                (input)="errorPath.set($any($event.target).value)"
+              />
+            </div>
+            <div class="fs-field">
+              <label class="fs-field__label">Metadata Path</label>
+              <input
+                type="text"
+                class="fs-input fs-input--mono"
+                [value]="metadataPath()"
+                (input)="metadataPath.set($any($event.target).value)"
+              />
+            </div>
+          </div>
+
+          <div class="fs-grid-2">
+            <div class="fs-field">
+              <label class="fs-field__label">Test Against Sample Status Response JSON</label>
+              <textarea
+                class="fs-textarea fs-input--mono"
+                rows="8"
+                [value]="sampleOutputJson()"
+                (input)="sampleOutputJson.set($any($event.target).value)"
+              ></textarea>
+            </div>
+            <div class="fs-field">
+              <span class="fs-field__label">Matched Values (Live Client-Side selectPath)</span>
+              <div class="mapping-results">
+                @for (res of outputMappingTestResults(); track res.path) {
+                  <div class="mapping-result-card">
+                    <div class="fs-spread">
+                      <code class="fs-mono">{{ res.path }}</code>
+                      <span class="fs-badge">{{ res.count }} matches ({{ res.role }})</span>
+                    </div>
+                    @for (p of res.previews; track $index) {
+                      <div class="fs-mono fs-micro">{{ p }}</div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @case ('workflow') {
+        <div class="fs-stack">
+          <div class="fs-spread">
+            <span class="fs-label">COMFYUI API WORKFLOW JSON</span>
+            @if (workflowHasEnhancedPrompt()) {
+              <span class="fs-badge" style="color: var(--fs-accent-emerald)">
+                Contains {{ '{{enhanced_prompt}}' }}
+              </span>
+            } @else {
+              <span class="fs-badge" style="color: var(--fs-accent-coral)">
+                Missing {{ '{{enhanced_prompt}}' }}
+              </span>
+            }
+          </div>
+          <div class="fs-cluster">
+            @for (v of templateVars; track v) {
+              <button type="button" class="check-chip" (click)="insertWorkflowVar(v)">
+                {{ '{{' + v + '}}' }}
+              </button>
+            }
+          </div>
+          <div style="height: 380px">
+            <fs-json-editor
+              #workflowEditor
+              [(value)]="workflowTemplateText"
+              [variables]="templateVars"
+            />
+          </div>
+        </div>
+      }
+
+      @case ('advanced') {
+        <div class="fs-stack">
+          <div class="fs-grid-3">
+            <div class="fs-field">
+              <label class="fs-field__label">Request Timeout (ms)</label>
+              <input
+                type="number"
+                class="fs-input fs-input--mono"
+                [value]="settings().timeoutMs ?? 120000"
+                (input)="patchSetting('timeoutMs', +$any($event.target).value)"
+              />
+            </div>
+            <div class="fs-field">
+              <label class="fs-field__label">Initial Poll Interval (ms)</label>
+              <input
+                type="number"
+                class="fs-input fs-input--mono"
+                [value]="settings().pollIntervalMs ?? 2000"
+                (input)="patchSetting('pollIntervalMs', +$any($event.target).value)"
+              />
+            </div>
+            <div class="fs-field">
+              <label class="fs-field__label">Max Concurrent Jobs</label>
+              <input
+                type="number"
+                class="fs-input fs-input--mono"
+                [value]="settings().maxConcurrency ?? 2"
+                (input)="patchSetting('maxConcurrency', +$any($event.target).value)"
+              />
+            </div>
+          </div>
+
+          <div class="fs-grid-3">
+            <div class="fs-field">
+              <label class="fs-field__label">Cost per GPU Second (USD)</label>
+              <input
+                type="number"
+                step="0.00001"
+                class="fs-input fs-input--mono"
+                [value]="settings().costPerSecondUsd ?? 0"
+                (input)="patchSetting('costPerSecondUsd', +$any($event.target).value)"
+              />
+            </div>
+            <div class="fs-field">
+              <label class="fs-field__label">Cost per Request (USD)</label>
+              <input
+                type="number"
+                step="0.001"
+                class="fs-input fs-input--mono"
+                [value]="settings().costPerRequestUsd ?? 0"
+                (input)="patchSetting('costPerRequestUsd', +$any($event.target).value)"
+              />
+            </div>
+            <div class="fs-field">
+              <label class="fs-field__label">Execution Timeout (ms)</label>
+              <input
+                type="number"
+                class="fs-input fs-input--mono"
+                [value]="settings().executionTimeoutMs ?? 600000"
+                (input)="patchSetting('executionTimeoutMs', +$any($event.target).value)"
+              />
+            </div>
+          </div>
+
+          <div class="fs-field">
+            <fs-toggle
+              label="Use RunPod Webhook Callback (PUBLIC_WEBHOOK_BASE_URL)"
+              [checked]="settings().useWebhook ?? false"
+              [disabled]="!state.webhooksEnabled()"
+              (checkedChange)="patchSetting('useWebhook', $event)"
+            />
+            @if (!state.webhooksEnabled()) {
+              <span class="fs-field__hint">
+                Disabled: configure PUBLIC_WEBHOOK_BASE_URL in backend .env to enable push webhooks.
+              </span>
+            }
+          </div>
+        </div>
+      }
+
+      @case ('health') {
+        @if (provider(); as p) {
+          <fs-health-indicator [provider]="p" />
+        }
+      }
+    }
+  </div>
+
+  <footer class="provider-editor__footer">
+    <button type="button" fsBtn variant="danger" size="sm" icon="trash" (click)="remove()">
+      {{ provider() ? 'Delete Provider' : 'Discard Draft' }}
+    </button>
+    <button
+      type="button"
+      fsBtn
+      variant="primary"
+      icon="check"
+      [loading]="saving()"
+      (click)="save()"
+    >
+      {{ provider() ? 'Save Changes' : 'Create Provider' }}
+    </button>
+  </footer>
+</div>

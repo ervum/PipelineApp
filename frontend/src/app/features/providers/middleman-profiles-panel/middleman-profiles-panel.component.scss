@@ -1,0 +1,202 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.profiles-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: space(4);
+  height: 100%;
+  min-height: 0;
+}
+
+.profiles-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+  @include scroll-y;
+  padding-right: space(1);
+}
+
+.profiles-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+}
+
+.profiles-title {
+  margin: 0;
+  font-size: fs('md');
+  font-weight: fw('semibold');
+  color: text-c('primary');
+}
+
+.profiles-sub {
+  margin: 2px 0 0;
+  font-size: fs('xs');
+  color: text-c('muted');
+}
+
+.profiles-list {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  padding: space(3);
+
+  &.is-selected {
+    border-color: accent('violet');
+    box-shadow: 0 0 0 1px accent-alpha('violet', 0.35);
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(2);
+  }
+
+  &__name {
+    font-weight: fw('semibold');
+    color: text-c('primary');
+    @include truncate;
+  }
+
+  &__meta {
+    font-size: fs('xs');
+    color: text-c('secondary');
+  }
+
+  &__stats {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+    font-size: fs('xs');
+    color: text-c('muted');
+  }
+
+  &__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: space(1);
+  }
+
+  &__radios {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+    padding-top: space(1);
+    border-top: 1px solid border-c('subtle');
+  }
+}
+
+.radio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: fs('xs');
+  color: text-c('secondary');
+  cursor: pointer;
+
+  input {
+    accent-color: accent('violet');
+    cursor: pointer;
+  }
+
+  &.is-active {
+    color: text-c('primary');
+    font-weight: fw('semibold');
+  }
+}
+
+.profiles-editor {
+  display: flex;
+  flex-direction: column;
+  gap: space(4);
+  @include scroll-y;
+}
+
+.editor-card,
+.test-compile-card {
+  display: flex;
+  flex-direction: column;
+  gap: space(4);
+  padding: space(4);
+}
+
+.editor-header,
+.test-compile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(3);
+
+  h4 {
+    margin: 0;
+    font-size: fs('md');
+    font-weight: fw('semibold');
+    color: text-c('primary');
+  }
+}
+
+.test-sub {
+  margin: 4px 0 0;
+  font-size: fs('xs');
+  color: text-c('secondary');
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: space(3);
+}
+
+.editor-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: space(4);
+  padding: space(2) 0;
+}
+
+.max-images-field {
+  max-width: 320px;
+}
+
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: space(2);
+  border-top: 1px solid border-c('subtle');
+}
+
+.test-controls {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: space(3);
+}
+
+.test-result {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+  padding-top: space(2);
+  border-top: 1px solid border-c('subtle');
+}
+
+.test-result-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+  font-size: fs('xs');
+  color: text-c('secondary');
+}

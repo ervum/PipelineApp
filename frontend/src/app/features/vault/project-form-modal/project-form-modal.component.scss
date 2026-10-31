@@ -1,0 +1,15 @@
+@use 'styles' as *;
+
+:host {
+  display: contents;
+}
+
+.color-Well {
+  width: 36px;
+  height: 32px;
+  padding: 2px;
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+  cursor: pointer;
+}

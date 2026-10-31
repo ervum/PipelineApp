@@ -1,0 +1,28 @@
+@if (dialogService.activeDialog(); as dlg) {
+  <fs-modal
+    [open]="true"
+    size="sm"
+    [title]="dlg.title"
+    (closed)="dialogService.respond('cancel')"
+  >
+    <p class="confirm-msg">{{ dlg.message }}</p>
+    <div modalFooter class="confirm-actions">
+      <button type="button" fsBtn variant="ghost" (click)="dialogService.respond('cancel')">
+        {{ dlg.cancelLabel || 'Cancel' }}
+      </button>
+      @if (dlg.extraAction) {
+        <button type="button" fsBtn variant="secondary" (click)="dialogService.respond('extra')">
+          {{ dlg.extraAction }}
+        </button>
+      }
+      <button
+        type="button"
+        fsBtn
+        [variant]="dlg.danger ? 'danger' : 'primary'"
+        (click)="dialogService.respond('confirm')"
+      >
+        {{ dlg.confirmLabel || 'Confirm' }}
+      </button>
+    </div>
+  </fs-modal>
+}

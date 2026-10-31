@@ -1,0 +1,30 @@
+@use 'sass:map';
+@use 'sass:math';
+@use 'sass:color';
+@use 'tokens' as t;
+
+@function surface($key)  { @return map.get(t.$surface, $key); }
+@function border-c($key) { @return map.get(t.$border, $key); }
+@function text-c($key)   { @return map.get(t.$text, $key); }
+@function accent($key, $tone: null) {
+  @if $key == 'muted' { @return map.get(t.$text, 'muted'); }
+  @if $tone == null { @return map.get(t.$accent, $key); }
+  @return map.get(map.get(t.$accent-ramp, $key), $tone);
+}
+/// Translucent accent fill: accent-alpha('cyan', 0.12)
+@function accent-alpha($key, $alpha) {
+  @if $key == 'muted' { @return rgba(map.get(t.$text, 'muted'), $alpha); }
+  @return rgba(map.get(t.$accent, $key), $alpha);
+}
+@function space($key)  { @return map.get(t.$space, '#{$key}'); }
+@function radius($key) { @return map.get(t.$radius, $key); }
+@function fs($key)     { @return map.get(t.$font-size, $key); }
+@function fw($key)     { @return map.get(t.$font-weight, $key); }
+@function lh($key)     { @return map.get(t.$line-height, $key); }
+@function z($key)      { @return map.get(t.$z, $key); }
+@function dur($key)    { @return map.get(t.$duration, $key); }
+@function ease($key)   { @return map.get(t.$easing, $key); }
+@function layout($key) { @return map.get(t.$layout, $key); }
+@function rem($px)     { @return math.div($px, 16px) * 1rem; }
+/// CSS custom-property reference, e.g. v(accent-cyan) → var(--fs-accent-cyan)
+@function v($name)     { @return var(--fs-#{$name}); }

@@ -1,0 +1,111 @@
+<div class="lore-previewer">
+  <header class="lore-previewer__toolbar">
+    <div class="toolbar-left">
+      <span class="scale-badge mono">{{ loreMeta().lengthForm }}</span>
+      <span class="category-badge">{{ loreMeta().loreCategory }}</span>
+      <span class="stat-pill mono">{{ wordCount() }} words</span>
+      <span class="stat-pill mono">{{ characterCount() }} chars</span>
+      <span class="stat-pill mono">~{{ readingMinutes() }} min read</span>
+    </div>
+
+    <div class="toolbar-right">
+      <div class="view-tabs">
+        <button
+          type="button"
+          class="view-tab"
+          [class.is-active]="viewMode() === 'READER'"
+          (click)="viewMode.set('READER')"
+        >
+          Formatted Reader
+        </button>
+        <button
+          type="button"
+          class="view-tab"
+          [class.is-active]="viewMode() === 'SOURCE'"
+          (click)="viewMode.set('SOURCE')"
+        >
+          Raw Source
+        </button>
+      </div>
+
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="copy"
+        (click)="copyLore()"
+      >
+        Copy
+      </button>
+
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="download"
+        (click)="downloadLore()"
+      >
+        Export {{ loreMeta().outputFormat === 'PLAIN_TEXT' ? '.txt' : '.md' }}
+      </button>
+
+      <button
+        fsBtn
+        variant="primary"
+        size="sm"
+        icon="vault"
+        [disabled]="savingToVault() || !loreText()"
+        (click)="saveToVault()"
+      >
+        {{ savingToVault() ? 'Saving...' : 'Save to Project Vault' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="lore-previewer__body">
+    @if (viewMode() === 'READER' && headings().length > 1) {
+      <aside class="lore-outline">
+        <div class="lore-outline__title">Document Structure</div>
+        <ul class="lore-outline__list">
+          @for (h of headings(); track $index) {
+            <li
+              class="lore-outline__item"
+              [class.level-2]="h.level === 2"
+              [class.level-3]="h.level === 3"
+            >
+              {{ h.text }}
+            </li>
+          }
+        </ul>
+      </aside>
+    }
+
+    <div class="lore-canvas">
+      @if (viewMode() === 'READER') {
+        <div class="lore-sheet" [class.lore-sheet--short]="loreMeta().lengthForm === 'SHORT_FORM'">
+          <fs-markdown-preview [content]="loreText()" />
+        </div>
+      } @else {
+        <div class="lore-source">
+          <fs-code-view [code]="loreText()" language="MARKDOWN" />
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (batchAssets().length > 1) {
+    <footer class="lore-previewer__variations">
+      <span class="variations-label">Batch Variations:</span>
+      @for (b of batchAssets(); track b.id; let i = $index) {
+        <button
+          type="button"
+          class="variation-pill"
+          [class.is-active]="b.id === asset().id"
+          (click)="selectBatchAsset.emit(b)"
+        >
+          <span class="mono">Take #{{ i + 1 }}</span>
+          <span class="variation-pill__title">{{ b.title }}</span>
+        </button>
+      }
+    </footer>
+  }
+</div>

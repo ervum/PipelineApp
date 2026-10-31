@@ -1,0 +1,129 @@
+@let a = asset();
+@if (listRow()) {
+  <article
+    class="asset-row"
+    [class.is-selected]="selected()"
+    [class.is-comparing]="comparing()"
+    (click)="selectAsset.emit(a)"
+  >
+    <div class="row-top">
+      <div class="row-title-group">
+        <span class="approval-dot" [attr.data-approval]="a.approval"></span>
+        <span class="asset-title">{{ a.title }}</span>
+        <span class="version-chip mono">v{{ a.version }}</span>
+      </div>
+
+      <div class="row-meta">
+        <fs-tier-badge [tier]="a.tier" />
+        <span class="cost-label mono">{{ formattedCost() }}</span>
+        <button
+          type="button"
+          class="action-btn"
+          [class.is-active]="a.isFavorite"
+          aria-label="Favorite"
+          (click)="onFav($event)"
+        >
+          <fs-icon [name]="a.isFavorite ? 'star-filled' : 'star'" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="action-btn"
+          [class.is-active]="comparing()"
+          aria-label="Compare"
+          (click)="onCompare($event)"
+        >
+          <fs-icon name="sliders" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="action-btn"
+          aria-label="Download"
+          (click)="onDownload($event)"
+        >
+          <fs-icon name="download" [size]="13" />
+        </button>
+      </div>
+    </div>
+
+    <fs-waveform-player [src]="a.primaryUrl" [height]="38" [compact]="true" accent="cyan" />
+  </article>
+} @else {
+  <article
+    class="asset-card"
+    [class.is-selected]="selected()"
+    [class.is-comparing]="comparing()"
+    (click)="selectAsset.emit(a)"
+  >
+    <div class="card-thumb">
+      @if (a.modality === 'LORE' && a.metadata.modality === 'LORE') {
+        <div class="lore-thumb">
+          <div class="lore-thumb__badges">
+            <span class="lore-scale-chip mono">{{ a.metadata.lengthForm }}</span>
+            <span class="lore-words-chip mono">{{ a.metadata.wordCount }}w</span>
+          </div>
+          <p class="lore-thumb__excerpt">{{ a.metadata.excerpt }}</p>
+        </div>
+      } @else if (a.thumbnailUrl || a.modality === 'ICONS_2D' || a.modality === 'IMAGES' || a.modality === 'VIDEO') {
+        <img [src]="a.thumbnailUrl || a.primaryUrl" [alt]="a.title" loading="lazy" />
+        @if (a.modality === 'VIDEO' && a.metadata.modality === 'VIDEO') {
+          <span class="video-duration-chip mono">
+            {{ a.metadata.durationMs / 1000 }}s · {{ a.metadata.fps }}fps
+          </span>
+        }
+      } @else {
+        <div class="thumb-glyph">
+          <fs-icon [name]="glyph()" [size]="28" />
+          <span class="submode-label mono">{{ a.subMode }}</span>
+        </div>
+      }
+
+      <div class="thumb-top-left">
+        <span class="approval-dot" [attr.data-approval]="a.approval"></span>
+        <span class="version-chip mono">v{{ a.version }}</span>
+      </div>
+
+      <div class="hover-actions">
+        <button
+          type="button"
+          class="action-btn"
+          [class.is-active]="a.isFavorite"
+          aria-label="Favorite"
+          (click)="onFav($event)"
+        >
+          <fs-icon [name]="a.isFavorite ? 'star-filled' : 'star'" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="action-btn"
+          [class.is-active]="comparing()"
+          aria-label="Compare"
+          (click)="onCompare($event)"
+        >
+          <fs-icon name="sliders" [size]="13" />
+        </button>
+        <button
+          type="button"
+          class="action-btn"
+          aria-label="Download"
+          (click)="onDownload($event)"
+        >
+          <fs-icon name="download" [size]="13" />
+        </button>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <div class="card-title-row">
+        <span class="asset-title">{{ a.title }}</span>
+        @if (a.isFavorite) {
+          <fs-icon name="star-filled" [size]="12" class="fav-indicator" />
+        }
+      </div>
+
+      <div class="card-meta-row">
+        <fs-tier-badge [tier]="a.tier" />
+        <span class="cost-label mono">{{ formattedCost() }}</span>
+      </div>
+    </div>
+  </article>
+}

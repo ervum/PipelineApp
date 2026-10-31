@@ -1,0 +1,92 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.asset-history-drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: surface('base');
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+  padding: space(3) space(3.5);
+  background: surface('raised');
+  border-bottom: 1px solid border-c('default');
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+}
+
+.drawer-title {
+  font-size: fs('xs');
+  font-weight: fw('bold');
+  color: text-c('secondary');
+  letter-spacing: 0.06em;
+}
+
+.count-chip {
+  padding: 1px 6px;
+  background: surface('overlay');
+  border: 1px solid border-c('subtle');
+  border-radius: radius('pill');
+  font-size: 11px;
+  color: text-c('primary');
+}
+
+.spend-chip {
+  padding: 2px 8px;
+  border-radius: radius('sm');
+  font-size: 11px;
+  @include tinted('emerald');
+}
+
+.drawer-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  @include scroll-y;
+}
+
+.empty-wrap {
+  padding: space(6) space(4);
+}
+
+.assets-container {
+  padding: space(3);
+  @include auto-grid(132px, space(2.5));
+
+  &.is-audio-list {
+    display: flex;
+    flex-direction: column;
+    gap: space(2);
+  }
+}
+
+.scroll-sentinel {
+  height: 4px;
+  flex-shrink: 0;
+}
+
+.reopen-inspector-bar {
+  padding: space(2.5) space(3);
+  border-top: 1px solid border-c('default');
+  background: surface('raised');
+  display: flex;
+  justify-content: center;
+}

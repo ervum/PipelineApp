@@ -1,0 +1,119 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Generation Mode</label>
+    <fs-segmented
+      [options]="subModeOptions"
+      [value]="params().subMode"
+      (valueChange)="patch({ subMode: $event })"
+    />
+  </div>
+
+  @if (params().subMode === 'IMAGE_TO_3D') {
+    <fs-reference-slot
+      label="Source Concept Image (Image-to-3D)"
+      [required]="true"
+      [error]="errors()['referenceStorageKey'] ?? null"
+      [storageKey]="params().referenceStorageKey"
+      (storageKeyChange)="patch({ referenceStorageKey: $event })"
+    />
+  }
+
+  <div class="fs-field">
+    <label class="fs-label">Asset Category</label>
+    <fs-select
+      [options]="categoryOptions"
+      [value]="params().assetCategory"
+      (valueChange)="onCategoryChange($event)"
+    />
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Polycount Tier</label>
+    <fs-segmented
+      [options]="polycountOptions"
+      [value]="params().polycountTier"
+      (valueChange)="patch({ polycountTier: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Texture Resolution</label>
+      <fs-segmented
+        [options]="texResOptions"
+        [value]="params().textureResolution"
+        (valueChange)="patch({ textureResolution: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-label">Export Format</label>
+      <fs-segmented
+        [options]="formatOptions"
+        [value]="params().outputFormat"
+        (valueChange)="patch({ outputFormat: $event })"
+      />
+    </div>
+  </div>
+
+  @if (params().assetCategory === 'CHARACTER_BASE') {
+    <div class="fs-field">
+      <label class="fs-label">Rigging Pose</label>
+      <fs-segmented
+        [options]="poseOptions"
+        [value]="params().pose"
+        (valueChange)="patch({ pose: $event })"
+      />
+    </div>
+  }
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Mesh Topology</label>
+      <fs-segmented
+        [options]="topologyOptions"
+        [value]="params().topology"
+        (valueChange)="patch({ topology: $event })"
+      />
+    </div>
+
+    <div class="pbr-toggle-wrap">
+      <fs-toggle
+        label="Generate PBR Maps"
+        [checked]="params().enablePbr"
+        (checkedChange)="patch({ enablePbr: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,116 @@
+<div class="model-viewport" [class.is-compact]="compact()">
+  <canvas #viewportCanvas></canvas>
+
+  <div class="vp-toolbar">
+    <button
+      fsBtn
+      [variant]="wireframe() ? 'primary' : 'ghost'"
+      size="sm"
+      icon="grid"
+      fsTooltip="Toggle Wireframe"
+      aria-label="Toggle wireframe"
+      (click)="toggleWireframe()"
+    ></button>
+    <button
+      fsBtn
+      [variant]="showGrid() ? 'primary' : 'ghost'"
+      size="sm"
+      icon="layers"
+      fsTooltip="Toggle Ground Grid"
+      aria-label="Toggle ground grid"
+      (click)="toggleGrid()"
+    ></button>
+    <button
+      fsBtn
+      [variant]="autoRotate() ? 'primary' : 'ghost'"
+      size="sm"
+      icon="refresh"
+      fsTooltip="Auto-Rotate"
+      aria-label="Toggle auto-rotate"
+      (click)="toggleAutoRotate()"
+    ></button>
+
+    <div class="rig-select-wrap">
+      <fs-select
+        [options]="rigOptions"
+        [value]="lightingRig()"
+        (valueChange)="changeLightingRig($event)"
+      />
+    </div>
+
+    <button
+      fsBtn
+      variant="ghost"
+      size="sm"
+      icon="maximize"
+      fsTooltip="Reset Camera"
+      aria-label="Reset camera"
+      (click)="resetCamera()"
+    ></button>
+    <button
+      fsBtn
+      variant="ghost"
+      size="sm"
+      icon="camera"
+      fsTooltip="Capture PNG Screenshot"
+      aria-label="Screenshot"
+      (click)="takeScreenshot()"
+    ></button>
+  </div>
+
+  @if (resolvedDownloadUrl(); as dlUrl) {
+    <div class="vp-top-right">
+      <span class="format-badge mono">.{{ resolvedFormat().toUpperCase() }}</span>
+      <a
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="download"
+        [href]="dlUrl"
+        download
+        aria-label="Download 3D file"
+      >
+        Export
+      </a>
+    </div>
+  }
+
+  @if (!compact() && stats(); as st) {
+    <dl class="vp-stats">
+      <div class="stat-item">
+        <dt>TRIS</dt>
+        <dd>{{ st.triangles.toLocaleString() }}</dd>
+      </div>
+      <div class="stat-item">
+        <dt>VERTS</dt>
+        <dd>{{ st.vertices.toLocaleString() }}</dd>
+      </div>
+      <div class="stat-item">
+        <dt>MATS</dt>
+        <dd>{{ st.materials }}</dd>
+      </div>
+      <div class="stat-item">
+        <dt>TEX</dt>
+        <dd>{{ st.textures }}</dd>
+      </div>
+      <div class="stat-item">
+        <dt>BOUNDS</dt>
+        <dd>{{ st.size[0] }}×{{ st.size[1] }}×{{ st.size[2] }}m</dd>
+      </div>
+    </dl>
+  }
+
+  @if (loadingProgress() !== null) {
+    <div class="vp-loading">
+      <span class="loading-label mono">Loading 3D Mesh · {{ loadingProgress() }}%</span>
+      <fs-progress [value]="loadingProgress()" accent="violet" />
+    </div>
+  }
+
+  @if (loadError(); as err) {
+    <div class="vp-error">
+      <fs-icon name="alert-triangle" [size]="16" />
+      <span>{{ err }}</span>
+    </div>
+  }
+</div>

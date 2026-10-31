@@ -1,0 +1,66 @@
+<div class="context-sources">
+  <div class="sources-header">
+    <span class="sources-title">Included Vault Files ({{ enrichedSources().length }})</span>
+    @if (totalTokens() > 0) {
+      <span class="sources-tokens mono">{{ totalTokens() }} tokens</span>
+    }
+  </div>
+
+  @if (enrichedSources().length === 0) {
+    <div class="sources-empty">No vault files were injected for this compilation.</div>
+  } @else {
+    <div class="sources-list">
+      @for (src of enrichedSources(); track src.fileId) {
+        <div class="source-card">
+          <div class="source-top">
+            <a [routerLink]="['/vault/file', src.fileId]" class="source-link">
+              <fs-icon name="file-text" [size]="14" />
+              <span class="source-name">{{ src.fileName }}</span>
+            </a>
+
+            @if (src.folderPath) {
+              <span class="source-folder mono">{{ src.folderPath }}</span>
+            }
+
+            <div class="source-badges">
+              <span class="reason-chip" [attr.data-reason]="src.reason">
+                {{ reasonLabel(src.reason) }}
+              </span>
+              @if (src.truncated) {
+                <span class="truncated-chip">TRUNCATED</span>
+              }
+              @if (src.tokens !== null) {
+                <span class="token-count mono">{{ src.tokens }} tok</span>
+              }
+            </div>
+          </div>
+
+          @if (src.reasoningNote) {
+            <p class="source-note">{{ src.reasoningNote }}</p>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (droppedFiles().length > 0) {
+    <div class="dropped-section">
+      <div class="sources-header">
+        <span class="sources-title is-muted">
+          Dropped (Over Token Budget · {{ droppedFiles().length }})
+        </span>
+      </div>
+      <div class="dropped-list">
+        @for (d of droppedFiles(); track d.fileId) {
+          <div class="dropped-row">
+            <a [routerLink]="['/vault/file', d.fileId]" class="dropped-link">
+              <fs-icon name="file-text" [size]="13" />
+              <span>{{ d.fileName }}</span>
+            </a>
+            <span class="dropped-meta mono">{{ d.reason }} · {{ d.tokens }} tok</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,28 @@
+<div class="nav-group" [class.is-collapsed]="collapsed()">
+  @if (!collapsed()) {
+    <div class="nav-group__title">{{ title() }}</div>
+  }
+  @for (item of items(); track item.route) {
+    <a
+      class="nav-item"
+      [routerLink]="item.route"
+      routerLinkActive="is-active"
+      [fsTooltip]="collapsed() ? item.label : ''"
+      placement="right"
+    >
+      <fs-icon [name]="item.icon" [size]="17" />
+      @if (!collapsed()) {
+        <span class="nav-item__label">{{ item.label }}</span>
+        @if (item.spinnerBadge) {
+          <span class="fs-spinner nav-item__spinner" title="Vision analysis running"></span>
+        }
+        @if (item.alertDot) {
+          <span class="nav-item__alert-dot" title="Provider health warning"></span>
+        }
+        @if (item.count && item.count > 0) {
+          <span class="nav-item__count">{{ item.count }}</span>
+        }
+      }
+    </a>
+  }
+</div>

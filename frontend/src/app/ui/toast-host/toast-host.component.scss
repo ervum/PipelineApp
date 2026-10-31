@@ -1,0 +1,83 @@
+@use 'sass:map';
+@use 'styles' as *;
+
+:host {
+  position: fixed;
+  right: space(4);
+  bottom: space(4);
+  z-index: z('toast');
+  pointer-events: none;
+}
+
+.toast-stack {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  width: min(380px, 90vw);
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: space('2');
+  padding: space(3);
+  border-radius: radius('lg');
+  background: surface('elevated');
+  border: 1px solid border-c('strong');
+  box-shadow: map.get($shadow, 'lg');
+  animation: fs-slide-up dur('base') ease('emphasized') both;
+
+  &[data-kind='success'] {
+    border-color: accent-alpha('emerald', 0.5);
+    > fs-icon {
+      color: accent('emerald', '300');
+    }
+  }
+
+  &[data-kind='warn'] {
+    border-color: accent-alpha('amber', 0.5);
+    > fs-icon {
+      color: accent('amber', '300');
+    }
+  }
+
+  &[data-kind='error'] {
+    border-color: accent-alpha('coral', 0.55);
+    > fs-icon {
+      color: accent('coral', '300');
+    }
+  }
+
+  &[data-kind='info'] {
+    border-color: accent-alpha('cyan', 0.45);
+    > fs-icon {
+      color: accent('cyan', '300');
+    }
+  }
+}
+
+.toast-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toast-title {
+  @include mono('2xs');
+  color: text-c('muted');
+  margin-bottom: 2px;
+}
+
+.toast-msg {
+  @include text('sm', 'regular', 'snug');
+  color: text-c('primary');
+}
+
+.toast-close {
+  @include interactive-reset;
+  color: text-c('muted');
+
+  &:hover {
+    color: text-c('primary');
+  }
+}

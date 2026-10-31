@@ -1,0 +1,142 @@
+@use 'styles' as *;
+
+:host {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: layout('vault-tree-width') minmax(0, 1fr) layout('vault-inspector-width');
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'tree toolbar inspector'
+    'tree content inspector';
+
+  &.no-inspector {
+    grid-template-columns: layout('vault-tree-width') minmax(0, 1fr) 0px;
+  }
+}
+
+.vault-tree {
+  grid-area: tree;
+  @include scroll-y;
+  background: surface('raised');
+  @include hairline('right');
+  padding: space(2);
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: space(1) space(2);
+  }
+}
+
+.vault-toolbar {
+  grid-area: toolbar;
+  @include section-header;
+  background: surface('raised');
+
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+    flex-wrap: wrap;
+  }
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: space(2);
+
+  &__item {
+    @include interactive-reset;
+    @include text('xs', 'medium', 'tight');
+    color: text-c('muted');
+    padding: 2px 4px;
+    border-radius: radius('xs');
+
+    &:hover {
+      color: text-c('primary');
+      background: surface('overlay');
+    }
+
+    &.is-current {
+      color: text-c('primary');
+      font-weight: 600;
+    }
+  }
+
+  &__sep {
+    color: text-c('disabled');
+    @include text('xs');
+  }
+}
+
+.toolbar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 220px;
+
+  fs-icon {
+    position: absolute;
+    left: 10px;
+    color: text-c('muted');
+    pointer-events: none;
+  }
+
+  .fs-input {
+    padding-left: 30px;
+  }
+}
+
+.scope-filter-select {
+  width: 150px;
+}
+
+.vault-content {
+  grid-area: content;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+
+  &.is-drag-over {
+    @include dropzone-active;
+  }
+}
+
+.media-stage-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  .media-stage-back {
+    padding: space(2) space(4);
+    background: surface('raised');
+    @include hairline('bottom');
+  }
+}
+
+.vault-inspector {
+  grid-area: inspector;
+  @include scroll-y;
+  background: surface('raised');
+  @include hairline('left');
+  padding: space(4);
+  @include stack(space(4));
+}
+
+.inspector-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: space(2);
+  padding-bottom: space(3);
+  @include hairline('bottom');
+}

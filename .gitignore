@@ -1,0 +1,14 @@
+node_modules/
+dist/
+storage/
+backend/storage/
+backend/.browser-profiles/
+.browser-profiles/
+.env
+.env.*
+!.env.example
+coverage/
+.angular/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

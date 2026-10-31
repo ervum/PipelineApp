@@ -1,0 +1,22 @@
+@if (open()) {
+  <aside
+    class="fs-drawer"
+    [class.fs-drawer--right]="side() === 'right'"
+    [class.fs-drawer--bottom]="side() === 'bottom'"
+    role="dialog"
+    [attr.aria-label]="title() || 'Drawer'"
+  >
+    <header class="fs-drawer__header">
+      <h3 class="fs-h4">{{ title() }}</h3>
+      <button type="button" fsBtn variant="ghost" size="icon" aria-label="Close" (click)="close()">
+        <fs-icon name="x" [size]="16" />
+      </button>
+    </header>
+    <div class="fs-drawer__body">
+      <ng-content />
+    </div>
+    <footer class="fs-drawer__footer">
+      <ng-content select="[drawerFooter]" />
+    </footer>
+  </aside>
+}

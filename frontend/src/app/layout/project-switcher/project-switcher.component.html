@@ -1,0 +1,75 @@
+<div class="switcher" [class.is-collapsed]="collapsed()">
+  <button
+    type="button"
+    class="switcher-btn"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()"
+  >
+    <span
+      class="switcher-swatch"
+      [style.background]="studio.activeProject()?.accentHex || '#7C3AED'"
+    ></span>
+    @if (!collapsed()) {
+      <span class="switcher-meta">
+        <span class="switcher-name">{{ studio.activeProject()?.name || 'Select Project' }}</span>
+        <span class="switcher-genre">{{ studio.activeProject()?.genre || 'No active project' }}</span>
+      </span>
+      <fs-icon name="chevron-down" [size]="14" />
+    }
+  </button>
+
+  @if (open()) {
+    <div class="switcher-popover" role="listbox">
+      <div class="switcher-search">
+        <fs-icon name="search" [size]="14" />
+        <input
+          type="text"
+          class="fs-input"
+          placeholder="Switch project (Ctrl+P)…"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="switcher-list">
+        @for (p of filteredProjects(); track p.id) {
+          <button
+            type="button"
+            role="option"
+            class="switcher-item"
+            [class.is-selected]="p.id === studio.activeProjectId()"
+            [attr.aria-selected]="p.id === studio.activeProjectId()"
+            (click)="select(p)"
+          >
+            <span class="switcher-swatch" [style.background]="p.accentHex"></span>
+            <span class="switcher-item__body">
+              <span class="switcher-item__title">{{ p.name }}</span>
+              <span class="switcher-item__stats">
+                {{ p.stats.assets }} assets · {{ p.stats.vaultFiles }} files · {{ p.genre }}
+              </span>
+            </span>
+            @if (p.id === studio.activeProjectId()) {
+              <fs-icon name="check" [size]="14" />
+            }
+          </button>
+        } @empty {
+          <div class="switcher-empty">No matching projects</div>
+        }
+      </div>
+
+      <div class="switcher-footer">
+        <button type="button" class="switcher-action" (click)="openNewProject()">
+          <fs-icon name="plus" [size]="14" />
+          <span>New Project…</span>
+        </button>
+        @if (studio.activeProject()) {
+          <button type="button" class="switcher-action" (click)="openSettings()">
+            <fs-icon name="settings" [size]="14" />
+            <span>Project settings…</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

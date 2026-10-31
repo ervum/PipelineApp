@@ -1,0 +1,77 @@
+<div class="sfx-variation-grid">
+  <header class="sfx-toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-title">SFX Variations ({{ items().length }})</span>
+      <span class="hotkey-hint mono">Press 1–8 to audition · Space to replay selected</span>
+    </div>
+
+    <div class="toolbar-right">
+      <button
+        fsBtn
+        [variant]="playOnHover() ? 'primary' : 'secondary'"
+        size="sm"
+        icon="volume-2"
+        (click)="playOnHover.set(!playOnHover())"
+      >
+        Audition on Hover
+      </button>
+
+      <button
+        fsBtn
+        [variant]="sequentialIndex() !== null ? 'danger' : 'primary'"
+        size="sm"
+        [icon]="sequentialIndex() !== null ? 'pause' : 'play'"
+        (click)="togglePlayAllSequential()"
+      >
+        {{ sequentialIndex() !== null ? 'Stop Sequence' : 'Play All Sequentially' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="variations-grid">
+    @for (item of items(); track item.id; let i = $index) {
+      <article
+        class="variation-card"
+        [class.is-selected]="item.id === asset().id"
+        [class.is-seq-playing]="sequentialIndex() === i"
+        (mouseenter)="onCardMouseEnter(i)"
+        (click)="selectVariation.emit(item)"
+      >
+        <div class="var-head">
+          <div class="var-id-group">
+            <kbd class="hotkey-kbd mono">{{ i + 1 }}</kbd>
+            <span class="var-title">{{ item.title }}</span>
+          </div>
+
+          <div class="var-actions">
+            <button
+              type="button"
+              class="icon-btn"
+              [class.is-fav]="item.isFavorite"
+              aria-label="Toggle favorite"
+              (click)="toggleFavorite(item, $event)"
+            >
+              <fs-icon [name]="item.isFavorite ? 'star-filled' : 'star'" [size]="14" />
+            </button>
+            <button
+              type="button"
+              class="approve-chip"
+              [class.is-approved]="item.approval === 'APPROVED'"
+              (click)="toggleApprove(item, $event)"
+            >
+              {{ item.approval === 'APPROVED' ? 'Approved' : 'Approve' }}
+            </button>
+          </div>
+        </div>
+
+        <fs-waveform-player
+          [src]="item.primaryUrl"
+          [loop]="item.metadata.modality === 'SFX' && item.metadata.loopable"
+          [height]="48"
+          [compact]="true"
+          accent="emerald"
+        />
+      </article>
+    }
+  </div>
+</div>

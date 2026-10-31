@@ -1,0 +1,163 @@
+<div class="voice-cast">
+  <div class="voice-cast__list">
+    <div class="fs-spread">
+      <div>
+        <h3 class="fs-h3">Project Voice Cast</h3>
+        <p class="fs-small">
+          Character voice profiles linked to vault character sheets and TTS providers.
+        </p>
+      </div>
+      <button type="button" fsBtn variant="primary" size="sm" icon="plus" (click)="startCreate()">
+        New Voice Profile
+      </button>
+    </div>
+
+    <div class="voice-cards">
+      @for (vp of vault.voiceProfiles(); track vp.id) {
+        <div class="fs-card" [class.is-selected]="editingId() === vp.id">
+          <div class="fs-card__body">
+            <div class="fs-spread">
+              <div class="fs-cluster">
+                <fs-icon name="mic" [size]="16" />
+                <span class="fs-h4">{{ vp.name }}</span>
+              </div>
+              <div class="fs-cluster">
+                <button type="button" fsBtn variant="ghost" size="sm" (click)="startEdit(vp)">
+                  <fs-icon name="edit" [size]="14" />
+                  <span>Edit</span>
+                </button>
+                <button type="button" fsBtn variant="ghost" size="sm" (click)="remove(vp)">
+                  <fs-icon name="trash" [size]="14" />
+                </button>
+              </div>
+            </div>
+
+            <p class="fs-small">{{ vp.description || 'No vocal direction notes.' }}</p>
+
+            <div class="fs-cluster">
+              @if (vp.providerName) {
+                <span class="fs-badge">{{ vp.providerName }}</span>
+              }
+              @if (vp.externalVoiceId) {
+                <span class="fs-badge fs-mono">{{ vp.externalVoiceId }}</span>
+              }
+              @if (vp.characterSheetFileId && vp.characterSheetName) {
+                <button
+                  type="button"
+                  fsBtn
+                  variant="ghost"
+                  size="sm"
+                  (click)="openCharacterSheet.emit(vp.characterSheetFileId)"
+                >
+                  <fs-icon name="file-md" [size]="13" />
+                  <span>{{ vp.characterSheetName }}</span>
+                </button>
+              }
+            </div>
+
+            @if (vp.sampleUrl) {
+              <fs-waveform-player [src]="vp.sampleUrl" [height]="56" />
+            }
+          </div>
+        </div>
+      } @empty {
+        <fs-empty-state
+          icon="mic"
+          title="No voice profiles yet"
+          message="Create character voice profiles so Middleman and Voices generators apply consistent vocal delivery."
+        >
+          <button type="button" fsBtn variant="primary" size="sm" (click)="startCreate()">
+            Create First Voice Profile
+          </button>
+        </fs-empty-state>
+      }
+    </div>
+  </div>
+
+  @if (isCreating() || editingId()) {
+    <aside class="voice-cast__editor fs-stack">
+      <div class="fs-spread">
+        <h4 class="fs-h4">{{ editingId() ? 'Edit Voice Profile' : 'New Voice Profile' }}</h4>
+        <button type="button" fsBtn variant="ghost" size="icon" (click)="cancelForm()">
+          <fs-icon name="x" [size]="14" />
+        </button>
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label">Character / Profile Name</label>
+        <input
+          type="text"
+          class="fs-input"
+          placeholder="e.g. Commander Lyra Vance"
+          [value]="name()"
+          (input)="name.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label">Linked Character Sheet (.md)</label>
+        <fs-select
+          [options]="markdownFileOptions()"
+          [(value)]="characterSheetFileId"
+          placeholder="Select vault character sheet…"
+          [searchable]="true"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label">Voice Provider</label>
+        <fs-select
+          [options]="voiceProviderOptions()"
+          [(value)]="providerConfigId"
+          placeholder="Select TTS provider…"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label">External Voice ID / Preset</label>
+        <input
+          type="text"
+          class="fs-input fs-input--mono"
+          placeholder="e.g. voice_lyra_01 or ElevenLabs voice ID"
+          [value]="externalVoiceId()"
+          (input)="externalVoiceId.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label">Vocal Timbre & Delivery Notes</label>
+        <textarea
+          class="fs-textarea"
+          rows="3"
+          placeholder="Mezzo-soprano, measured cadence, tactical calm under pressure…"
+          [value]="description()"
+          (input)="description.set($any($event.target).value)"
+        ></textarea>
+      </div>
+
+      <fs-slider label="Default Speed" [min]="0.7" [max]="1.3" [step]="0.05" [(value)]="speed" />
+      <fs-slider
+        label="Default Stability"
+        [min]="0"
+        [max]="1"
+        [step]="0.05"
+        [(value)]="stability"
+      />
+      <fs-slider
+        label="Similarity Boost"
+        [min]="0"
+        [max]="1"
+        [step]="0.05"
+        [(value)]="similarityBoost"
+      />
+      <fs-slider label="Style Exaggeration" [min]="0" [max]="1" [step]="0.05" [(value)]="style" />
+
+      <div class="fs-cluster">
+        <button type="button" fsBtn variant="ghost" (click)="cancelForm()">Cancel</button>
+        <button type="button" fsBtn variant="primary" [loading]="saving()" (click)="save()">
+          Save Profile
+        </button>
+      </div>
+    </aside>
+  }
+</div>

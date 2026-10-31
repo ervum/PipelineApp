@@ -1,0 +1,80 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: space('1.5');
+}
+
+.chip-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: space('1.5');
+  min-height: 34px;
+  padding: space(1) space(2);
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  border-radius: radius('md');
+
+  &:focus-within {
+    border-color: border-c('focus');
+  }
+}
+
+.chip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: space(1);
+  height: 22px;
+  padding: 0 space(2);
+  border-radius: radius('sm');
+  @include tinted('violet');
+  @include text('xs', 'medium', 'tight');
+}
+
+.chip-remove {
+  @include interactive-reset;
+  display: inline-flex;
+  color: inherit;
+  opacity: 0.75;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.chip-input-el {
+  flex: 1 1 80px;
+  min-width: 60px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: text-c('primary');
+  @include text('xs', 'regular', 'tight');
+
+  &::placeholder {
+    color: text-c('muted');
+  }
+}
+
+.chip-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: space(1);
+}
+
+.chip-suggestion {
+  @include interactive-reset;
+  padding: 2px space('1.5');
+  border-radius: radius('xs');
+  background: surface('overlay');
+  border: 1px solid border-c('subtle');
+  color: text-c('muted');
+  @include text('2xs', 'medium', 'tight');
+
+  &:hover {
+    color: text-c('primary');
+    border-color: border-c('strong');
+  }
+}

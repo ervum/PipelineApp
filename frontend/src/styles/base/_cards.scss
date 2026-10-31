@@ -1,0 +1,35 @@
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-card {
+  @include m.panel('overlay', 'lg');
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  &--interactive {
+    @include m.card-interactive;
+    cursor: pointer;
+  }
+
+  &__media {
+    position: relative;
+    background: f.surface('sunken');
+    overflow: hidden;
+    @include m.center;
+  }
+
+  &__body {
+    padding: f.space(3);
+    @include m.stack(f.space('1.5'));
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: f.space(2);
+    @include m.text('xs', 'regular', 'tight');
+    color: f.text-c('muted');
+  }
+}

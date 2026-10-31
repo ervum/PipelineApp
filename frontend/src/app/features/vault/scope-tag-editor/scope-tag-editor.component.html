@@ -1,0 +1,40 @@
+<div class="scope-editor fs-stack">
+  <div class="fs-field">
+    <span class="fs-label">MIDDLEMAN CONTEXT SCOPES</span>
+    <div class="scope-grid">
+      @for (s of allScopes; track s) {
+        <button
+          type="button"
+          class="scope-chip"
+          [class.is-active]="hasScope(s)"
+          [attr.data-accent]="accentForScope(s)"
+          [attr.aria-pressed]="hasScope(s)"
+          (click)="toggleScope(s)"
+        >
+          {{ scopeLabels[s] }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <fs-slider
+    label="Context Priority"
+    [min]="0"
+    [max]="100"
+    [step]="5"
+    [value]="priority()"
+    (valueChange)="onPriorityChange($event)"
+  />
+
+  <div class="fs-field">
+    <label class="fs-field__label" for="vault-file-desc">Context Note / Description</label>
+    <textarea
+      id="vault-file-desc"
+      class="fs-textarea"
+      rows="2"
+      placeholder="Optional note explaining when Middleman should prioritize this file…"
+      [value]="description()"
+      (input)="onDescriptionInput($event)"
+    ></textarea>
+  </div>
+</div>

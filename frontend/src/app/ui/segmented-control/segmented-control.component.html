@@ -1,0 +1,18 @@
+<div class="fs-segmented" role="radiogroup" [attr.aria-label]="ariaLabel()">
+  @for (opt of options(); track opt.value) {
+    <button
+      type="button"
+      role="radio"
+      class="fs-segmented__option"
+      [class.is-active]="value() === opt.value"
+      [attr.aria-checked]="value() === opt.value"
+      [disabled]="opt.disabled ?? false"
+      (click)="select(opt)"
+    >
+      @if (opt.icon) {
+        <fs-icon [name]="opt.icon" [size]="14" />
+      }
+      <span>{{ opt.label }}</span>
+    </button>
+  }
+</div>

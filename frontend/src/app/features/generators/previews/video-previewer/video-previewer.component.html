@@ -1,0 +1,189 @@
+<div class="video-previewer">
+  <header class="video-previewer__hud">
+    <div class="hud-chips">
+      <span class="hud-chip mono">{{ videoMeta().width }}×{{ videoMeta().height }}</span>
+      <span class="hud-chip mono">{{ videoMeta().fps }} FPS</span>
+      <span class="hud-chip mono">{{ durationSec() }}s</span>
+      <span class="hud-chip">{{ videoMeta().cameraMotion }}</span>
+      @if (videoMeta().memoryStrategy === 'RAM_FALLBACK_32GB') {
+        <span class="hud-chip hud-chip--ram">32GB DDR5 RAM Fallback</span>
+      }
+    </div>
+
+    <div class="hud-actions">
+      @if (compareAsset()) {
+        <button
+          fsBtn
+          variant="ghost"
+          size="sm"
+          icon="close"
+          (click)="clearCompare.emit()"
+        >
+          Exit Compare
+        </button>
+      }
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="camera"
+        (click)="captureStillFrame()"
+      >
+        Capture Frame PNG
+      </button>
+      <button
+        fsBtn
+        variant="primary"
+        size="sm"
+        icon="download"
+        (click)="downloadClip()"
+      >
+        Download Clip
+      </button>
+    </div>
+  </header>
+
+  <div class="video-previewer__stage" [class.is-comparing]="!!compareAsset()">
+    <div class="video-pane">
+      @if (isNativeVideo()) {
+        <video
+          #videoPlayer
+          class="video-element"
+          [src]="asset().primaryUrl"
+          [loop]="loop()"
+          autoplay
+          muted
+          playsinline
+          (timeupdate)="onVideoTimeUpdate($event)"
+          (ended)="onVideoEnded()"
+        ></video>
+      } @else {
+        <div class="deck-viewport">
+          <img
+            class="deck-frame"
+            [src]="activeFrameUrl()"
+            [alt]="asset().title"
+          />
+          <div class="deck-overlay">
+            <span class="mono">
+              FRAME {{ currentFrameIndex() + 1 }} / {{ totalFrames() }}
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (compareAsset(); as cmp) {
+      <div class="video-pane video-pane--compare">
+        <div class="compare-badge">COMPARE: {{ cmp.title }}</div>
+        <img class="deck-frame" [src]="cmp.primaryUrl" [alt]="cmp.title" />
+      </div>
+    }
+  </div>
+
+  <footer class="video-previewer__transport">
+    <div class="transport-controls">
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        [icon]="playing() ? 'pause' : 'play'"
+        (click)="togglePlay()"
+      >
+        {{ playing() ? 'Pause' : 'Play' }}
+      </button>
+
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        (click)="stepFrame(-1)"
+        title="Previous Frame (-1f)"
+      >
+        -1f
+      </button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        (click)="stepFrame(1)"
+        title="Next Frame (+1f)"
+      >
+        +1f
+      </button>
+
+      <span class="timecode mono">{{ timecodeText() }}</span>
+    </div>
+
+    <div class="transport-scrubber">
+      <input
+        type="range"
+        class="scrubber-input"
+        [min]="0"
+        [max]="scrubberMax()"
+        [step]="isNativeVideo() ? 0.04 : 1"
+        [value]="scrubberValue()"
+        (input)="onScrubberInput($event)"
+      />
+    </div>
+
+    <div class="transport-right">
+      <div class="speed-pills">
+        @for (spd of speedOptions; track spd) {
+          <button
+            type="button"
+            class="speed-pill mono"
+            [class.is-active]="playbackRate() === spd"
+            (click)="setSpeed(spd)"
+          >
+            {{ spd }}×
+          </button>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="loop-btn"
+        [class.is-active]="loop()"
+        (click)="toggleLoop()"
+        title="Toggle seamless loop"
+      >
+        <fs-icon name="repeat" [size]="14" />
+        <span>Loop</span>
+      </button>
+    </div>
+  </footer>
+
+  @if (!isNativeVideo() && frameFiles().length > 1) {
+    <div class="filmstrip">
+      @for (f of frameFiles(); track f.id; let idx = $index) {
+        <button
+          type="button"
+          class="filmstrip__thumb"
+          [class.is-active]="currentFrameIndex() === idx"
+          (click)="playing.set(false); currentFrameIndex.set(idx)"
+        >
+          <img [src]="f.url" [alt]="'Frame ' + (idx + 1)" />
+          <span class="mono">#{{ idx + 1 }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  @if (batchAssets().length > 1) {
+    <div class="batch-strip">
+      <span class="batch-strip__label">Batch Takes:</span>
+      @for (b of batchAssets(); track b.id; let i = $index) {
+        <button
+          type="button"
+          class="batch-thumb"
+          [class.is-active]="b.id === asset().id"
+          (click)="selectBatchAsset.emit(b)"
+        >
+          <img [src]="b.thumbnailUrl ?? b.primaryUrl" [alt]="b.title" />
+          <span class="mono">#{{ i + 1 }}</span>
+        </button>
+      }
+    </div>
+  }
+</div>

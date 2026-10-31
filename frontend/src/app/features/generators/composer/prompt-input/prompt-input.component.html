@@ -1,0 +1,55 @@
+<div class="prompt-input-wrap">
+  <div class="prompt-input-label-row">
+    <label class="fs-label" for="composer-prompt-textarea">Creative Direction Prompt</label>
+    <span class="prompt-shortcut-hint">Type <kbd>@</kbd> to cite vault files · <kbd>/</kbd> focus</span>
+  </div>
+
+  <div class="prompt-textarea-box">
+    <textarea
+      #textareaEl
+      id="composer-prompt-textarea"
+      class="fs-textarea prompt-textarea"
+      rows="4"
+      maxlength="4000"
+      [value]="value()"
+      [placeholder]="placeholder()"
+      (input)="onInput($event)"
+      (keydown)="onKeyDown($event)"
+    ></textarea>
+
+    @if (mentionOpen() && mentionResults().length > 0) {
+      <div class="mention-popover" role="listbox" aria-label="Vault file mentions">
+        @for (file of mentionResults(); track file.id; let idx = $index) {
+          <button
+            type="button"
+            role="option"
+            class="mention-option"
+            [class.is-active]="idx === activeIndex()"
+            [attr.aria-selected]="idx === activeIndex()"
+            (mousedown)="$event.preventDefault(); insertMention(file)"
+          >
+            <fs-icon [name]="iconForKind(file.kind)" [size]="15" />
+            <div class="mention-option__main">
+              <span class="mention-option__name">{{ file.name }}</span>
+              <span class="mention-option__path">{{ file.folderPath }}</span>
+            </div>
+            <div class="mention-option__scopes">
+              @for (s of file.scopes.slice(0, 2); track s) {
+                <span class="fs-badge fs-badge--neutral">{{ scopeLabels[s] }}</span>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="prompt-footer">
+    <span class="kbd-hints">
+      <kbd>Ctrl+Enter</kbd> Generate · <kbd>Ctrl+Shift+Enter</kbd> Compile First
+    </span>
+    <span class="char-counter mono" [class.is-near-limit]="charCount() > 3600">
+      {{ charCount() }} / 4000
+    </span>
+  </div>
+</div>

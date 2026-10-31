@@ -1,0 +1,54 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.params-panel {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+}
+
+.params-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: space(3);
+}
+
+.bpm-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bpm-controls {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+
+  .fs-input {
+    flex: 1;
+  }
+}
+
+.toggles-group {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  padding: space(2.5) space(3);
+  background: surface('overlay');
+  border: 1px solid border-c('subtle');
+  border-radius: radius('md');
+}
+
+.seed-row {
+  display: flex;
+  align-items: center;
+  gap: space(1.5);
+
+  .fs-input {
+    flex: 1;
+  }
+}

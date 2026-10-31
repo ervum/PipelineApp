@@ -1,0 +1,68 @@
+<div class="json-tree">
+  <div class="json-tree__toolbar">
+    @if (parsed().valid) {
+      <span class="fs-badge" style="color: var(--fs-accent-emerald)">Valid JSON</span>
+    } @else {
+      <span class="fs-badge" style="color: var(--fs-accent-coral)">
+        Invalid JSON: {{ parsed().error }}
+      </span>
+    }
+    <fs-segmented [options]="modeOptions" [(value)]="mode" ariaLabel="JSON view mode" />
+  </div>
+
+  @if (mode() === 'raw' || !parsed().valid) {
+    <fs-code-view [code]="resolvedText()" language="JSON" />
+  } @else if (parsed().tree; as root) {
+    <div class="json-tree__body">
+      <ng-container
+        *ngTemplateOutlet="nodeTpl; context: { $implicit: root, depth: 0 }"
+      ></ng-container>
+    </div>
+  }
+</div>
+
+<ng-template #nodeTpl let-node let-depth="depth">
+  <div class="json-node" [style.paddingLeft.px]="depth * 16">
+    @if (node.children) {
+      <div class="json-node__row">
+        <button type="button" class="json-node__toggle" (click)="togglePath(node.path)">
+          <fs-icon [name]="isCollapsed(node.path) ? 'chevron-right' : 'chevron-down'" [size]="12" />
+        </button>
+        <span class="json-key">{{ node.key }}</span>
+        <span class="json-meta">
+          {{ node.kind === 'array' ? '[' + node.children.length + ']' : '{' + node.children.length + '}' }}
+        </span>
+        <button
+          type="button"
+          class="json-copy"
+          title="Copy JSONPath"
+          (click)="copyPath(node.path)"
+        >
+          <fs-icon name="copy" [size]="11" />
+        </button>
+      </div>
+      @if (!isCollapsed(node.path)) {
+        @for (child of node.children; track child.path) {
+          <ng-container
+            *ngTemplateOutlet="nodeTpl; context: { $implicit: child, depth: depth + 1 }"
+          ></ng-container>
+        }
+      }
+    } @else {
+      <div class="json-node__row">
+        <span class="json-key">{{ node.key }}:</span>
+        <span class="json-val" [attr.data-kind]="node.kind">
+          {{ node.kind === 'string' ? '"' + node.value + '"' : node.value }}
+        </span>
+        <button
+          type="button"
+          class="json-copy"
+          title="Copy JSONPath"
+          (click)="copyPath(node.path)"
+        >
+          <fs-icon name="copy" [size]="11" />
+        </button>
+      </div>
+    }
+  </div>
+</ng-template>

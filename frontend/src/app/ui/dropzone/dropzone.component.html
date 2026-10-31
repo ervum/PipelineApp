@@ -1,0 +1,26 @@
+<div
+  class="dropzone"
+  [class.is-drag-over]="isDragging()"
+  role="button"
+  tabindex="0"
+  (click)="openPicker()"
+  (keydown.enter)="openPicker()"
+  (keydown.space)="openPicker(); $event.preventDefault()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+>
+  <input
+    #fileInput
+    type="file"
+    class="fs-sr-only"
+    [attr.accept]="accept()"
+    [multiple]="multiple()"
+    (change)="onFileChange($event)"
+  />
+  <fs-icon name="upload" [size]="20" />
+  <span class="dropzone__label">{{ label() }}</span>
+  @if (hint()) {
+    <span class="dropzone__hint">{{ hint() }}</span>
+  }
+</div>

@@ -1,0 +1,295 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ForgeStudio: Run Full Stack (Docker + Shared + Backend + Frontend)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "ForgeStudio: Watch Database (Docker Postgres + Prisma)",
+        "ForgeStudio: Watch Shared (@forge/shared)",
+        "ForgeStudio: Watch Backend (@forge/backend)",
+        "ForgeStudio: Watch Frontend (@forge/frontend)"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: First-Time Setup (Install + DB Up + Migrate & Seed)",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "ForgeStudio: Install Dependencies",
+        "ForgeStudio: Prepare Full Stack (DB + Build Shared)",
+        "ForgeStudio: Reset & Reseed Database"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Prepare Full Stack (DB + Build Shared)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "ForgeStudio: Start Database Container (Docker Postgres)",
+        "ForgeStudio: Build Shared (@forge/shared)"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Run Backend Only (@forge/backend)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "ForgeStudio: Watch Shared (@forge/shared)",
+        "ForgeStudio: Watch Backend (@forge/backend)"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Run Frontend Only (@forge/frontend)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "ForgeStudio: Watch Shared (@forge/shared)",
+        "ForgeStudio: Watch Frontend (@forge/frontend)"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Build All Workspaces",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "ForgeStudio: Build Shared (@forge/shared)",
+        "ForgeStudio: Build App Workspaces (Backend + Frontend)"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Build App Workspaces (Backend + Frontend)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "ForgeStudio: Build Backend (@forge/backend)",
+        "ForgeStudio: Build Frontend (@forge/frontend)"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Run All Tests & Lint",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "ForgeStudio: Test Shared (@forge/shared)",
+        "ForgeStudio: Test Backend (@forge/backend)",
+        "ForgeStudio: Lint (ESLint)",
+        "ForgeStudio: Check Forbidden Dependencies"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Watch Database (Docker Postgres + Prisma)",
+      "type": "shell",
+      "command": "npm run db:watch",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev-servers",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Watch Shared (@forge/shared)",
+      "type": "shell",
+      "command": "npm run watch:shared",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev-servers",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc-watch"]
+    },
+    {
+      "label": "ForgeStudio: Watch Backend (@forge/backend)",
+      "type": "shell",
+      "command": "npm run watch:backend",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev-servers",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc-watch"]
+    },
+    {
+      "label": "ForgeStudio: Watch Frontend (@forge/frontend)",
+      "type": "shell",
+      "command": "npm run start -w @forge/frontend",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev-servers",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Install Dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Start Database Container (Docker Postgres)",
+      "type": "shell",
+      "command": "npm run db:up",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Reset & Reseed Database",
+      "type": "shell",
+      "command": "npm run db:reset",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ForgeStudio: Build Shared (@forge/shared)",
+      "type": "shell",
+      "command": "npm run build:shared",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ForgeStudio: Build Backend (@forge/backend)",
+      "type": "shell",
+      "command": "npm run build -w @forge/backend",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ForgeStudio: Build Frontend (@forge/frontend)",
+      "type": "shell",
+      "command": "npm run build -w @forge/frontend",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ForgeStudio: Test Shared (@forge/shared)",
+      "type": "shell",
+      "command": "npm run test -w @forge/shared",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ForgeStudio: Test Backend (@forge/backend)",
+      "type": "shell",
+      "command": "npm run test -w @forge/backend",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ForgeStudio: Lint (ESLint)",
+      "type": "shell",
+      "command": "npx eslint .",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ForgeStudio: Check Forbidden Dependencies",
+      "type": "shell",
+      "command": "node scripts/check-forbidden-deps.mjs",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

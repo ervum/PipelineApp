@@ -1,0 +1,111 @@
+<fs-modal
+  [(open)]="open"
+  size="md"
+  [title]="isEdit() ? 'Project Settings' : 'New Game Project'"
+>
+  <form class="project-form fs-stack" (submit)="save(); $event.preventDefault()">
+    @if (fieldError()) {
+      <div class="fs-field__error">{{ fieldError() }}</div>
+    }
+
+    <div class="fs-grid-2">
+      <div class="fs-field">
+        <label class="fs-field__label" for="proj-name">
+          <span>Project Name</span>
+          <span class="fs-mono fs-micro">/{{ slugPreview() }}</span>
+        </label>
+        <input
+          id="proj-name"
+          type="text"
+          class="fs-input"
+          placeholder="e.g. Astra: Crystal Odyssey"
+          [value]="name()"
+          (input)="name.set($any($event.target).value)"
+          required
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label" for="proj-genre">Genre</label>
+        <input
+          id="proj-genre"
+          type="text"
+          class="fs-input"
+          placeholder="e.g. Sci-Fi Action RPG"
+          [value]="genre()"
+          (input)="genre.set($any($event.target).value)"
+        />
+      </div>
+    </div>
+
+    <div class="fs-grid-2">
+      <div class="fs-field">
+        <label class="fs-field__label" for="proj-tagline">Tagline</label>
+        <input
+          id="proj-tagline"
+          type="text"
+          class="fs-input"
+          placeholder="Short studio pitch…"
+          [value]="tagline()"
+          (input)="tagline.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-field__label" for="proj-accent">Studio Accent Hex</label>
+        <div class="fs-input-group">
+          <input
+            type="color"
+            class="color-Well"
+            [value]="accentHex()"
+            (input)="accentHex.set($any($event.target).value)"
+          />
+          <input
+            id="proj-accent"
+            type="text"
+            class="fs-input fs-input--mono"
+            [value]="accentHex()"
+            (input)="accentHex.set($any($event.target).value)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-field__label" for="proj-desc">Description</label>
+      <textarea
+        id="proj-desc"
+        class="fs-textarea"
+        rows="2"
+        placeholder="High-level project overview…"
+        [value]="description()"
+        (input)="description.set($any($event.target).value)"
+      ></textarea>
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-field__label" for="proj-summary">
+        <span>Global Middleman Context Summary</span>
+        <span class="fs-mono fs-micro">~{{ summaryTokens() }} tokens</span>
+      </label>
+      <textarea
+        id="proj-summary"
+        class="fs-textarea fs-input--mono"
+        rows="5"
+        placeholder="Core visual direction, camera perspective, palette rules, and audio direction injected into every Middleman prompt compilation…"
+        [value]="globalSummary()"
+        (input)="globalSummary.set($any($event.target).value)"
+      ></textarea>
+      <span class="fs-field__hint">
+        Always prepended to Middleman compilations for this project.
+      </span>
+    </div>
+  </form>
+
+  <div modalFooter class="fs-cluster">
+    <button type="button" fsBtn variant="ghost" (click)="open.set(false)">Cancel</button>
+    <button type="button" fsBtn variant="primary" [loading]="saving()" (click)="save()">
+      {{ isEdit() ? 'Save Changes' : 'Create Project' }}
+    </button>
+  </div>
+</fs-modal>

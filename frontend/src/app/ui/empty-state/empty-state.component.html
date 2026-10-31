@@ -1,0 +1,12 @@
+<div class="empty-state">
+  <div class="empty-state__icon">
+    <fs-icon [name]="icon()" [size]="24" />
+  </div>
+  <h3 class="fs-h4">{{ title() }}</h3>
+  @if (message()) {
+    <p class="empty-state__msg">{{ message() }}</p>
+  }
+  <div class="empty-state__actions">
+    <ng-content />
+  </div>
+</div>

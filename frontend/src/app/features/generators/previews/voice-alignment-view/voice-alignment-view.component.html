@@ -1,0 +1,79 @@
+<div class="voice-alignment-view">
+  <section class="voice-card">
+    <header class="voice-header">
+      <div class="voice-title-group">
+        <span class="profile-chip">
+          <fs-icon name="mic" [size]="14" />
+          <span>{{ voiceProfileName() }}</span>
+        </span>
+        <span class="voice-title">{{ asset().title }}</span>
+      </div>
+
+      @if (asset().tags.length > 0) {
+        <div class="emotion-chips">
+          @for (tag of asset().tags; track tag) {
+            <span class="emotion-chip">{{ tag }}</span>
+          }
+        </div>
+      }
+    </header>
+
+    <fs-waveform-player [src]="asset().primaryUrl" [height]="104" accent="violet" />
+
+    @if (words().length > 0) {
+      <div class="word-timeline-section">
+        <span class="section-label">Word Alignment Timeline (click word to seek)</span>
+        <div class="word-timeline-track">
+          @for (w of words(); track w.index) {
+            <button
+              type="button"
+              class="timeline-word-box"
+              [class.is-active]="activeWordIndex() === w.index"
+              [style.left.%]="w.leftPct"
+              [style.width.%]="w.widthPct"
+              (click)="seekToWord(w)"
+            >
+              <span class="word-text">{{ w.word }}</span>
+              <span class="word-ms mono">{{ (w.startMs / 1000).toFixed(2) }}s</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="transcript-box">
+        <span class="section-label">Synchronized Transcript</span>
+        <p class="transcript-paragraph">
+          @for (w of words(); track w.index) {
+            <button
+              type="button"
+              class="transcript-word"
+              [class.is-active]="activeWordIndex() === w.index"
+              (click)="seekToWord(w)"
+            >
+              {{ w.word }}
+            </button>
+          }
+        </p>
+      </div>
+    }
+  </section>
+
+  @if (batchAssets().length > 1) {
+    <section class="takes-card">
+      <span class="section-label">Recorded Takes ({{ batchAssets().length }})</span>
+      <div class="takes-row">
+        @for (take of batchAssets(); track take.id) {
+          <button
+            type="button"
+            class="take-pill"
+            [class.is-active]="take.id === asset().id"
+            (click)="selectBatchAsset.emit(take)"
+          >
+            <fs-icon name="mic" [size]="13" />
+            <span>Take #{{ take.batchIndex + 1 }}</span>
+          </button>
+        }
+      </div>
+    </section>
+  }
+</div>

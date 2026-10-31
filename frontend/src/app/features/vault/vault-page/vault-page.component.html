@@ -1,0 +1,246 @@
+<aside class="vault-tree">
+  <div class="vault-tree__header">
+    <span class="fs-label">PROJECT VAULT</span>
+    <div class="fs-cluster">
+      <button
+        type="button"
+        fsBtn
+        variant="ghost"
+        size="icon"
+        class="fs-btn--sm"
+        title="New Folder"
+        (click)="openCreateFolderModal()"
+      >
+        <fs-icon name="folder" [size]="14" />
+      </button>
+      <button
+        type="button"
+        fsBtn
+        variant="ghost"
+        size="icon"
+        class="fs-btn--sm"
+        title="New Markdown File (Ctrl+N)"
+        (click)="openNewFileModal()"
+      >
+        <fs-icon name="plus" [size]="14" />
+      </button>
+    </div>
+  </div>
+  <fs-folder-tree
+    (folderSelect)="handleSelectFolder($event)"
+    (requestNewFile)="openNewFileModal($event)"
+    (requestNewFolder)="openCreateFolderModal($event)"
+    (requestRenameFolder)="openRenameFolderModal($event)"
+    (requestDeleteFolder)="handleDeleteFolder($event)"
+    (dropFilesOnFolder)="onDropFilesOnFolder($event)"
+  />
+</aside>
+
+<header class="vault-toolbar">
+  <div class="vault-toolbar__left">
+    <fs-segmented
+      [options]="sectionOptions"
+      [(value)]="activeSection"
+      ariaLabel="Vault section"
+    />
+
+    @if (activeSection() === 'files') {
+      <nav class="breadcrumb" aria-label="Folder breadcrumb">
+        @for (crumb of vault.breadcrumb(); track crumb.id; let last = $last) {
+          <button
+            type="button"
+            class="breadcrumb__item"
+            [class.is-current]="last"
+            (click)="handleSelectFolder(crumb.id)"
+          >
+            {{ crumb.parentId === null ? 'Root' : crumb.name }}
+          </button>
+          @if (!last) {
+            <span class="breadcrumb__sep">/</span>
+          }
+        }
+      </nav>
+    }
+  </div>
+
+  @if (activeSection() === 'files') {
+    <div class="vault-toolbar__right">
+      <div class="toolbar-search">
+        <fs-icon name="search" [size]="14" />
+        <input
+          type="text"
+          class="fs-input"
+          placeholder="Search files & vision descriptors…"
+          [value]="vault.searchQuery()"
+          (input)="vault.searchQuery.set($any($event.target).value)"
+        />
+      </div>
+
+      <select
+        class="fs-select-native scope-filter-select"
+        [value]="vault.scopeFilter() || ''"
+        (change)="vault.scopeFilter.set($any($event.target).value || null)"
+      >
+        <option value="">All Scopes</option>
+        @for (s of allScopes; track s) {
+          <option [value]="s">{{ scopeLabels[s] }}</option>
+        }
+      </select>
+
+      <fs-segmented
+        [options]="viewOptions"
+        [(value)]="vault.viewMode"
+        ariaLabel="Browser view mode"
+      />
+
+      <input
+        #uploadInput
+        type="file"
+        class="fs-sr-only"
+        multiple
+        (change)="onUploadFilesSelected($event)"
+      />
+      <button
+        type="button"
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="upload"
+        (click)="triggerUploadPicker()"
+      >
+        Upload
+      </button>
+      <button
+        type="button"
+        fsBtn
+        variant="primary"
+        size="sm"
+        icon="plus"
+        (click)="openNewFileModal()"
+      >
+        New File
+      </button>
+    </div>
+  }
+</header>
+
+<section
+  class="vault-content"
+  [class.is-drag-over]="isDragOver()"
+  (dragover)="onContentDragOver($event)"
+  (dragleave)="onContentDragLeave()"
+  (drop)="onContentDrop($event)"
+>
+  @if (activeSection() === 'voices') {
+    <fs-voice-profiles-panel (openCharacterSheet)="handleOpenFileById($event)" />
+  } @else if (vault.openFile(); as openFile) {
+    @if (isTextKind()) {
+      <fs-file-editor (closeEditor)="handleCloseEditor()" />
+    } @else {
+      <div class="media-stage-wrap">
+        <div class="media-stage-back">
+          <button type="button" fsBtn variant="ghost" size="sm" (click)="handleCloseEditor()">
+            ← Back to Folder
+          </button>
+        </div>
+        <fs-media-preview [file]="openFile" />
+      </div>
+    }
+  } @else {
+    <fs-file-browser
+      (fileOpen)="handleOpenFile($event)"
+      (requestNewFile)="openNewFileModal()"
+      (requestUpload)="triggerUploadPicker()"
+    />
+  }
+</section>
+
+@if (activeSection() === 'files' && inspectedFile(); as file) {
+  <aside class="vault-inspector">
+    <div class="inspector-head">
+      <div>
+        <div class="fs-label">{{ file.kind }}</div>
+        <h3 class="fs-h4">{{ file.name }}</h3>
+        <div class="fs-micro fs-mono">
+          {{ file.folderPath }} · {{ formatBytes(file.sizeBytes) }} · ~{{ file.tokenEstimate }} tokens
+        </div>
+      </div>
+      <div class="fs-cluster">
+        @if (!vault.openFile()) {
+          <button type="button" fsBtn variant="secondary" size="sm" (click)="handleOpenFile(file)">
+            Open
+          </button>
+        }
+        <button
+          type="button"
+          fsBtn
+          variant="danger"
+          size="icon"
+          class="fs-btn--sm"
+          title="Delete file (Del)"
+          (click)="deleteSelectedFile()"
+        >
+          <fs-icon name="trash" [size]="14" />
+        </button>
+      </div>
+    </div>
+
+    <fs-scope-tag-editor [file]="file" />
+
+    @if (file.kind === 'IMAGE') {
+      <fs-vision-panel [file]="file" />
+    }
+  </aside>
+}
+
+<fs-upload-queue />
+
+<fs-modal [(open)]="newFileModalOpen" size="sm" title="Create Vault Document">
+  <form class="fs-stack" (submit)="submitNewFile(); $event.preventDefault()">
+    @if (newFileError()) {
+      <div class="fs-field__error">{{ newFileError() }}</div>
+    }
+    <div class="fs-field">
+      <label class="fs-field__label">File Name (.md, .txt, or .json)</label>
+      <input
+        type="text"
+        class="fs-input fs-input--mono"
+        [value]="newFileName()"
+        (input)="newFileName.set($any($event.target).value)"
+      />
+    </div>
+  </form>
+  <div modalFooter class="fs-cluster">
+    <button type="button" fsBtn variant="ghost" (click)="newFileModalOpen.set(false)">
+      Cancel
+    </button>
+    <button type="button" fsBtn variant="primary" (click)="submitNewFile()">Create File</button>
+  </div>
+</fs-modal>
+
+<fs-modal
+  [(open)]="folderModalOpen"
+  size="sm"
+  [title]="folderModalMode() === 'create' ? 'New Vault Folder' : 'Rename Folder'"
+>
+  <form class="fs-stack" (submit)="submitFolderModal(); $event.preventDefault()">
+    <div class="fs-field">
+      <label class="fs-field__label">Folder Name</label>
+      <input
+        type="text"
+        class="fs-input"
+        placeholder="e.g. Lore & Factions"
+        [value]="folderModalName()"
+        (input)="folderModalName.set($any($event.target).value)"
+      />
+    </div>
+  </form>
+  <div modalFooter class="fs-cluster">
+    <button type="button" fsBtn variant="ghost" (click)="folderModalOpen.set(false)">
+      Cancel
+    </button>
+    <button type="button" fsBtn variant="primary" (click)="submitFolderModal()">
+      {{ folderModalMode() === 'create' ? 'Create Folder' : 'Rename' }}
+    </button>
+  </div>
+</fs-modal>

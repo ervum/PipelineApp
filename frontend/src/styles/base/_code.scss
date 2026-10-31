@@ -1,0 +1,36 @@
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-code {
+  counter-reset: line;
+  background: f.surface('sunken');
+  border: 1px solid f.border-c('subtle');
+  border-radius: f.radius('md');
+  padding: f.space(3);
+  @include m.mono('xs');
+  line-height: 1.6;
+  overflow: auto;
+  @include m.custom-scrollbar;
+
+  &__line {
+    display: block;
+    white-space: pre;
+
+    &::before {
+      counter-increment: line;
+      content: counter(line);
+      display: inline-block;
+      width: 32px;
+      margin-right: f.space(3);
+      text-align: right;
+      color: f.text-c('disabled');
+      user-select: none;
+    }
+  }
+}
+
+.tok-kw  { color: f.accent('violet', '300'); font-weight: 600; }
+.tok-str { color: f.accent('emerald', '300'); }
+.tok-num { color: f.accent('amber', '300'); }
+.tok-com { color: f.text-c('muted'); font-style: italic; }
+.tok-fn  { color: f.accent('cyan', '300'); }

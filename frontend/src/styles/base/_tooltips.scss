@@ -1,0 +1,32 @@
+@use 'sass:map';
+@use 'styles/tokens' as t;
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-tooltip {
+  position: fixed;
+  z-index: f.z('tooltip');
+  max-width: 280px;
+  padding: f.space(1) f.space(2);
+  background: f.surface('elevated');
+  color: f.text-c('primary');
+  border: 1px solid f.border-c('strong');
+  border-radius: f.radius('sm');
+  box-shadow: map.get(t.$shadow, 'md');
+  @include m.text('xs', 'medium', 'snug');
+  pointer-events: none;
+  animation: fs-fade-in f.dur('instant') f.ease('standard') both;
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: f.surface('elevated');
+    border-right: 1px solid f.border-c('strong');
+    border-bottom: 1px solid f.border-c('strong');
+    transform: rotate(45deg);
+    bottom: -4px;
+    left: calc(50% - 3px);
+  }
+}

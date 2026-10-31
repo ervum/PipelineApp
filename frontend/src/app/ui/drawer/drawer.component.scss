@@ -1,0 +1,9 @@
+@use 'styles' as *;
+
+:host {
+  display: contents;
+}
+
+.fs-drawer__footer:empty {
+  display: none;
+}

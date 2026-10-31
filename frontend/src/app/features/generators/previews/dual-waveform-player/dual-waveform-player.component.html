@@ -1,0 +1,146 @@
+<div class="dual-waveform-player">
+  <section class="track-card">
+    <div class="track-header">
+      <div class="track-title-group">
+        <span class="track-badge">A · PRIMARY</span>
+        <span class="track-title">{{ asset().title }}</span>
+      </div>
+
+      @if (musicMeta(); as meta) {
+        <div class="meta-chips">
+          @if (meta.bpm) {
+            <span class="meta-chip mono">{{ meta.bpm }} BPM</span>
+          }
+          @if (meta.keySignature) {
+            <span class="meta-chip mono">{{ meta.keySignature }}</span>
+          }
+          <span class="meta-chip mono">{{ (meta.sampleRate / 1000).toFixed(1) }} kHz</span>
+          @if (meta.loop) {
+            <span class="meta-chip is-accent">LOOP READY</span>
+          }
+        </div>
+      }
+    </div>
+
+    <fs-waveform-player
+      [src]="asset().primaryUrl"
+      [loop]="musicMeta()?.loop ?? true"
+      [height]="104"
+      accent="cyan"
+    />
+  </section>
+
+  @if (compareAsset(); as cmp) {
+    <section class="track-card is-compare">
+      <div class="track-header">
+        <div class="track-title-group">
+          <span class="track-badge is-b">B · COMPARE</span>
+          <span class="track-title">{{ cmp.title }}</span>
+        </div>
+        <button
+          fsBtn
+          variant="ghost"
+          size="sm"
+          icon="x"
+          aria-label="Clear compare track"
+          (click)="clearCompare.emit()"
+        >
+          Clear Compare
+        </button>
+      </div>
+
+      <fs-waveform-player [src]="cmp.primaryUrl" [loop]="true" [height]="92" accent="violet" />
+    </section>
+  }
+
+  @if (stems().length > 0) {
+    <section class="stems-card">
+      <div class="stems-header">
+        <div class="track-title-group">
+          <fs-icon name="layers" [size]="15" />
+          <span class="section-title">Stem Lanes ({{ stems().length }})</span>
+        </div>
+        <button
+          fsBtn
+          [variant]="stemsPlaying() ? 'danger' : 'primary'"
+          size="sm"
+          [icon]="stemsPlaying() ? 'pause' : 'play'"
+          (click)="togglePlayStems()"
+        >
+          {{ stemsPlaying() ? 'Stop Synchronized Stems' : 'Play All Stems (Sync)' }}
+        </button>
+      </div>
+
+      <div class="stems-list">
+        @for (stem of stems(); track stem.file.id) {
+          <div class="stem-lane" [class.is-muted]="stem.muted">
+            <div class="stem-controls">
+              <span class="stem-name mono">{{ stem.label }}</span>
+              <div class="stem-btns">
+                <button
+                  type="button"
+                  class="ms-btn"
+                  [class.is-mute-active]="stem.muted"
+                  (click)="toggleStemMute(stem.file.id)"
+                >
+                  M
+                </button>
+                <button
+                  type="button"
+                  class="ms-btn"
+                  [class.is-solo-active]="stem.solo"
+                  (click)="toggleStemSolo(stem.file.id)"
+                >
+                  S
+                </button>
+              </div>
+            </div>
+            <div class="stem-wave">
+              <fs-waveform-player
+                [src]="stem.file.url"
+                [height]="52"
+                [compact]="true"
+                accent="violet"
+              />
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <section class="seam-inspector-card">
+    <div class="seam-header">
+      <div class="seam-title-group">
+        <fs-icon name="repeat" [size]="15" />
+        <span class="section-title">
+          Loop Seam Inspector (Last {{ seamWindowSec() }}s → First {{ seamWindowSec() }}s)
+        </span>
+      </div>
+
+      <div class="seam-right">
+        @if (seamJumpDb() !== null) {
+          <span class="seam-db-badge mono" [attr.data-severity]="seamBadgeSeverity()">
+            RMS Seam Jump: {{ seamJumpDb() }} dB
+          </span>
+        }
+        <button
+          fsBtn
+          [variant]="seamPlaying() ? 'primary' : 'secondary'"
+          size="sm"
+          [icon]="seamPlaying() ? 'pause' : 'play'"
+          (click)="toggleAuditionSeam()"
+        >
+          {{ seamPlaying() ? 'Stop Seam Loop' : 'Audition Loop Seam' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="seam-canvas-wrap">
+      <canvas #seamCanvas></canvas>
+      <div class="seam-boundary-line">
+        <span class="seam-boundary-tag mono">LOOP BOUNDARY (00:00)</span>
+      </div>
+    </div>
+  </section>
+</div>

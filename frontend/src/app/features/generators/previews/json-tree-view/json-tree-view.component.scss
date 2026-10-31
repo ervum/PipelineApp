@@ -1,0 +1,87 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+  min-height: 0;
+}
+
+.json-tree {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(2);
+  }
+
+  &__body {
+    padding: space(3);
+    background: surface('sunken');
+    border: 1px solid border-c('subtle');
+    border-radius: radius('md');
+    @include mono('xs');
+    line-height: 1.7;
+  }
+}
+
+.json-node__row {
+  display: flex;
+  align-items: center;
+  gap: space('1.5');
+  border-radius: radius('xs');
+  padding: 1px 4px;
+
+  &:hover {
+    background: surface('overlay');
+
+    .json-copy {
+      opacity: 1;
+    }
+  }
+}
+
+.json-node__toggle {
+  @include interactive-reset;
+  color: text-c('muted');
+  display: inline-flex;
+}
+
+.json-key {
+  color: accent('violet', '300');
+}
+
+.json-meta {
+  color: text-c('muted');
+}
+
+.json-val {
+  &[data-kind='string'] {
+    color: accent('emerald', '300');
+  }
+  &[data-kind='number'] {
+    color: accent('amber', '300');
+  }
+  &[data-kind='boolean'] {
+    color: accent('cyan', '300');
+  }
+  &[data-kind='null'] {
+    color: text-c('muted');
+    font-style: italic;
+  }
+}
+
+.json-copy {
+  @include interactive-reset;
+  opacity: 0;
+  color: text-c('muted');
+  margin-left: auto;
+
+  &:hover {
+    color: text-c('primary');
+  }
+}

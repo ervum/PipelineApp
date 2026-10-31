@@ -1,0 +1,50 @@
+<div class="providers-page">
+  <header class="providers-page__header">
+    <div>
+      <h2 class="providers-page__title">Providers, RunPod &amp; Middleman</h2>
+      <p class="providers-page__subtitle">
+        Configure Cloud APIs, RunPod Serverless GPU templates, local ComfyUI/Ollama nodes, and Middleman compiler blueprints.
+      </p>
+    </div>
+    <fs-tabs
+      [tabs]="topTabs"
+      [active]="activeTab()"
+      (activeChange)="onTabChange($event)"
+    />
+  </header>
+
+  <div class="providers-page__body">
+    @switch (activeTab()) {
+      @case ('providers') {
+        <div class="providers-split">
+          <fs-provider-list
+            (selectProvider)="onSelectProvider($event)"
+            (createFromCatalog)="onCreateFromCatalog($event)"
+          />
+          <div class="providers-editor-pane">
+            @if (draftCatalogEntry() || state.selectedProvider()) {
+              <fs-provider-editor
+                [provider]="draftCatalogEntry() ? null : state.selectedProvider()"
+                [draftCatalogEntry]="draftCatalogEntry()"
+                (saved)="onProviderSaved($event)"
+                (cancelledDraft)="onCancelDraft()"
+              />
+            } @else {
+              <fs-empty-state
+                icon="server"
+                title="No Provider Selected"
+                message="Choose a provider from the list or click + Add Provider to configure a Cloud API, RunPod Serverless GPU endpoint, or local node."
+              />
+            }
+          </div>
+        </div>
+      }
+      @case ('profiles') {
+        <fs-middleman-profiles-panel />
+      }
+      @case ('templates') {
+        <fs-middleman-templates-panel />
+      }
+    }
+  </div>
+</div>

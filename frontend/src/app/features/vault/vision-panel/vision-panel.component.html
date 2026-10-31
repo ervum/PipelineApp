@@ -1,0 +1,97 @@
+<div class="vision-panel fs-stack">
+  <div class="fs-spread">
+    <span class="fs-label">VISION STYLE DESCRIPTOR</span>
+    <fs-status-pill [status]="pillStatus()" [label]="file().visionStatus" />
+  </div>
+
+  @if (file().visionStatus === 'FAILED' && file().visionError) {
+    <div class="vision-error">{{ file().visionError }}</div>
+  }
+
+  @if (file().styleDescriptorJson; as sd) {
+    @if (sd.paletteHex.length > 0) {
+      <div class="palette-row">
+        @for (hex of sd.paletteHex; track hex) {
+          <button
+            type="button"
+            class="palette-swatch"
+            [style.background]="hex"
+            [title]="'Copy ' + hex"
+            (click)="copyHex(hex)"
+          >
+            <span>{{ hex }}</span>
+          </button>
+        }
+      </div>
+    }
+
+    <dl class="fs-kv">
+      @if (sd.lighting) {
+        <dt>Lighting</dt>
+        <dd>{{ sd.lighting }}</dd>
+      }
+      @if (sd.rendering) {
+        <dt>Rendering</dt>
+        <dd>{{ sd.rendering }}</dd>
+      }
+      @if (sd.linework) {
+        <dt>Linework</dt>
+        <dd>{{ sd.linework }}</dd>
+      }
+      @if (sd.materials) {
+        <dt>Materials</dt>
+        <dd>{{ sd.materials }}</dd>
+      }
+      @if (sd.mood) {
+        <dt>Mood</dt>
+        <dd>{{ sd.mood }}</dd>
+      }
+    </dl>
+  }
+
+  <div class="fs-field">
+    <label class="fs-field__label" for="style-desc-override">
+      <span>Style Descriptor Text (Injected into Middleman)</span>
+    </label>
+    <textarea
+      id="style-desc-override"
+      class="fs-textarea fs-input--mono"
+      rows="4"
+      placeholder="Extracted visual style descriptor…"
+      [value]="descriptorText()"
+      (input)="descriptorText.set($any($event.target).value)"
+    ></textarea>
+    <div class="fs-spread">
+      <span class="fs-micro">{{ file().visionModel || 'Manual / Seeded' }}</span>
+      <button
+        type="button"
+        fsBtn
+        variant="secondary"
+        size="sm"
+        [loading]="savingOverride()"
+        (click)="saveDescriptorOverride()"
+      >
+        Save Text
+      </button>
+    </div>
+  </div>
+
+  <div class="reanalyze-box">
+    <fs-select
+      [options]="visionProfileOptions()"
+      [(value)]="selectedProfileId"
+      placeholder="Vision profile…"
+    />
+    <button
+      type="button"
+      fsBtn
+      variant="ai"
+      size="sm"
+      [disabled]="file().visionStatus === 'RUNNING' || file().visionStatus === 'PENDING'"
+      (click)="runAnalysis()"
+    >
+      <fs-icon name="sparkles" [size]="14" />
+      <span>Re-analyze</span>
+    </button>
+  </div>
+</div>

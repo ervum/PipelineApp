@@ -1,0 +1,454 @@
+@let def = activeModelDef();
+@let rs = runSettings();
+
+@if (def) {
+  <section class="gw-run-settings">
+    <header class="gw-run-settings__header">
+      <div class="gw-title">
+        <fs-icon name="sliders" [size]="15" />
+        <span>Run settings</span>
+        <span class="gw-auth-pill">
+          {{
+            def.authMode === 'gemini_guest'
+              ? 'Gemini Guest'
+              : def.authMode === 'gemini_auth'
+                ? 'Gemini Signed-In'
+                : 'AI Studio'
+          }}
+        </span>
+      </div>
+      <div class="gw-header-actions">
+        <button
+          type="button"
+          class="gw-icon-btn"
+          title="Toggle live browser window visibility"
+          (click)="toggleBrowser()"
+        >
+          <fs-icon name="eye" [size]="13" />
+          <span>{{ providerState.browserVisible() ? 'Hide Browser' : 'Show Browser' }}</span>
+        </button>
+        <button
+          type="button"
+          class="gw-icon-btn"
+          title="Reset default settings"
+          (click)="resetDefaults()"
+        >
+          <fs-icon name="refresh" [size]="13" />
+        </button>
+      </div>
+    </header>
+
+    <!-- Model Card Selector -->
+    <div class="gw-model-card">
+      <label class="gw-label">Google Web / AI Studio Model</label>
+      <select
+        class="fs-select-native gw-model-select"
+        [value]="def.id"
+        (change)="onModelSelect($any($event.target).value)"
+      >
+        @if (guestModels().length > 0) {
+          <optgroup label="1. Gemini Web (Guest Mode — No Sign-In)">
+            @for (m of guestModels(); track m.id) {
+              <option [value]="m.id">{{ m.label }}</option>
+            }
+          </optgroup>
+        }
+        @if (geminiAuthModels().length > 0) {
+          <optgroup label="2. Gemini Web (Signed In)">
+            @for (m of geminiAuthModels(); track m.id) {
+              <option [value]="m.id">{{ m.label }}</option>
+            }
+          </optgroup>
+        }
+        @if (aiStudioModels().length > 0) {
+          <optgroup label="3. Google AI Studio (Signed In)">
+            @for (m of aiStudioModels(); track m.id) {
+              <option [value]="m.id">{{ m.label }}</option>
+            }
+          </optgroup>
+        }
+      </select>
+      @if (def.notes) {
+        <span class="gw-model-notes">{{ def.notes }}</span>
+      }
+    </div>
+
+    @if (!def.parameters.hasConfiguration) {
+      <div class="gw-no-config">
+        <span>No additional configuration options for this model.</span>
+      </div>
+    } @else {
+      <div class="gw-controls">
+        <!-- Output format (Nano Banana 2.1 / 2 / 2 Lite) -->
+        @if (def.parameters.outputFormats; as formats) {
+          <div class="gw-row">
+            <span class="gw-label">Output format</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.outputFormat || formats[0]"
+              (change)="patchRunSetting('outputFormat', $any($event.target).value)"
+            >
+              @for (fmt of formats; track fmt) {
+                <option [value]="fmt">{{ fmt }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Video task (Gemini Omni 1.1 Flash) -->
+        @if (def.parameters.videoTasks; as vTasks) {
+          <div class="gw-row">
+            <span class="gw-label">Video task</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.videoTask || 'unspecified'"
+              (change)="patchRunSetting('videoTask', $any($event.target).value)"
+            >
+              @for (vt of vTasks; track vt) {
+                <option [value]="vt">{{ vt }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Temperature -->
+        @if (def.parameters.temperature; as tempSpec) {
+          <div class="gw-slider-block">
+            <div class="gw-row">
+              <span class="gw-label">Temperature</span>
+              <div class="gw-slider-controls">
+                <input
+                  type="range"
+                  class="gw-range"
+                  [min]="tempSpec.min"
+                  [max]="tempSpec.max"
+                  [step]="tempSpec.step"
+                  [value]="rs.temperature ?? tempSpec.default"
+                  (input)="patchRunSetting('temperature', +$any($event.target).value)"
+                />
+                <input
+                  type="number"
+                  class="fs-input fs-input--mono gw-num-box"
+                  [min]="tempSpec.min"
+                  [max]="tempSpec.max"
+                  [step]="tempSpec.step"
+                  [value]="rs.temperature ?? tempSpec.default"
+                  (input)="patchRunSetting('temperature', +$any($event.target).value)"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Aspect Ratio -->
+        @if (def.parameters.aspectRatios; as ratios) {
+          <div class="gw-row">
+            <span class="gw-label">Aspect ratio</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.aspectRatio || ratios[0]"
+              (change)="patchRunSetting('aspectRatio', $any($event.target).value)"
+            >
+              @for (ar of ratios; track ar) {
+                <option [value]="ar">{{ ar }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Resolution -->
+        @if (def.parameters.resolutions; as resolutions) {
+          <div class="gw-row">
+            <span class="gw-label">Resolution</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.resolution || resolutions[0]"
+              (change)="patchRunSetting('resolution', $any($event.target).value)"
+            >
+              @for (resOpt of resolutions; track resOpt) {
+                <option [value]="resOpt">{{ resOpt }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Video Duration & Frame Rate (Gemini Omni 1.1 Flash) -->
+        @if (def.parameters.videoDurationSec; as durSpec) {
+          <div class="gw-row">
+            <span class="gw-label">Video duration (sec)</span>
+            <div class="gw-slider-controls">
+              <input
+                type="range"
+                class="gw-range"
+                [min]="durSpec.min"
+                [max]="durSpec.max"
+                step="1"
+                [value]="rs.videoDurationSec ?? durSpec.default"
+                (input)="patchRunSetting('videoDurationSec', +$any($event.target).value)"
+              />
+              <input
+                type="number"
+                class="fs-input fs-input--mono gw-num-box"
+                [min]="durSpec.min"
+                [max]="durSpec.max"
+                [value]="rs.videoDurationSec ?? durSpec.default"
+                (input)="patchRunSetting('videoDurationSec', +$any($event.target).value)"
+              />
+            </div>
+          </div>
+        }
+
+        @if (def.parameters.frameRates; as fpsList) {
+          <div class="gw-row">
+            <span class="gw-label">Frame rate</span>
+            <span class="fs-badge fs-mono">{{ fpsList[0] }}</span>
+          </div>
+        }
+
+        <!-- Live Audio Voice (30 Voices) -->
+        @if (def.parameters.voices; as voices) {
+          <div class="gw-row">
+            <span class="gw-label">Voice (30 options)</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.liveVoice || 'Puck'"
+              (change)="patchRunSetting('liveVoice', $any($event.target).value)"
+            >
+              @for (v of voices; track v) {
+                <option [value]="v">{{ v }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Media Resolution -->
+        @if (def.parameters.mediaResolutions; as mediaResList) {
+          <div class="gw-row">
+            <span class="gw-label">Media resolution</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.mediaResolution || mediaResList[0]"
+              (change)="patchRunSetting('mediaResolution', $any($event.target).value)"
+            >
+              @for (mr of mediaResList; track mr) {
+                <option [value]="mr">{{ mr }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Thinking Level -->
+        @if (def.parameters.thinkingLevels; as tLevels) {
+          <div class="gw-row">
+            <span class="gw-label">Thinking level</span>
+            <select
+              class="fs-select-native gw-compact-select"
+              [value]="rs.thinkingLevel || tLevels[0]"
+              (change)="patchRunSetting('thinkingLevel', $any($event.target).value)"
+            >
+              @for (tl of tLevels; track tl) {
+                <option [value]="tl">{{ tl }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Context Size (Audio-to-Audio Live) -->
+        @if (def.parameters.contextSize; as ctxSpec) {
+          <div class="gw-row">
+            <span class="gw-label">Max context size</span>
+            <input
+              type="number"
+              class="fs-input fs-input--mono gw-num-wide"
+              [min]="ctxSpec.min"
+              [max]="ctxSpec.max"
+              step="1024"
+              [value]="rs.maxContextSize ?? ctxSpec.defaultMax"
+              (input)="patchRunSetting('maxContextSize', +$any($event.target).value)"
+            />
+          </div>
+          <div class="gw-row">
+            <span class="gw-label">Target context size</span>
+            <input
+              type="number"
+              class="fs-input fs-input--mono gw-num-wide"
+              [min]="ctxSpec.min"
+              [max]="ctxSpec.max"
+              step="1024"
+              [value]="rs.targetContextSize ?? ctxSpec.defaultTarget"
+              (input)="patchRunSetting('targetContextSize', +$any($event.target).value)"
+            />
+          </div>
+        }
+
+        <!-- Tools Section -->
+        @if (hasToolsSection()) {
+          <div class="gw-divider"></div>
+          <div class="gw-section-title">Tools</div>
+
+          @if (def.parameters.supportsGroundingWithGoogleSearch) {
+            <div class="gw-row">
+              <span class="gw-label">Grounding with Google Search</span>
+              <fs-toggle
+                [checked]="rs.groundingWithGoogleSearch ?? false"
+                (checkedChange)="patchRunSetting('groundingWithGoogleSearch', $event)"
+              />
+            </div>
+          }
+
+          @if (def.parameters.supportsImageSearch) {
+            <div class="gw-row">
+              <span class="gw-label">Image Search</span>
+              <fs-toggle
+                [checked]="rs.imageSearch ?? false"
+                (checkedChange)="patchRunSetting('imageSearch', $event)"
+              />
+            </div>
+          }
+
+          @if (def.parameters.supportsStructuredOutputs) {
+            <div class="gw-row">
+              <span class="gw-label">Structured Outputs</span>
+              <fs-toggle
+                [checked]="rs.structuredOutputs ?? false"
+                (checkedChange)="patchRunSetting('structuredOutputs', $event)"
+              />
+            </div>
+          }
+
+          @if (def.parameters.supportsCodeExecution) {
+            <div class="gw-row">
+              <span class="gw-label">Code Execution</span>
+              <fs-toggle
+                [checked]="rs.codeExecution ?? false"
+                (checkedChange)="patchRunSetting('codeExecution', $event)"
+              />
+            </div>
+          }
+
+          @if (def.parameters.supportsFunctionCalling) {
+            <div class="gw-row">
+              <span class="gw-label">Function calling</span>
+              <fs-toggle
+                [checked]="rs.functionCalling ?? false"
+                (checkedChange)="patchRunSetting('functionCalling', $event)"
+              />
+            </div>
+          }
+
+          @if (def.parameters.supportsAutoFunctionResponse) {
+            <div class="gw-row">
+              <span class="gw-label">Automatic function response</span>
+              <fs-toggle
+                [checked]="rs.autoFunctionResponse ?? false"
+                (checkedChange)="patchRunSetting('autoFunctionResponse', $event)"
+              />
+            </div>
+          }
+
+          @if (def.parameters.supportsUrlContext) {
+            <div class="gw-row">
+              <span class="gw-label">URL Context</span>
+              <fs-toggle
+                [checked]="rs.urlContext ?? false"
+                (checkedChange)="patchRunSetting('urlContext', $event)"
+              />
+            </div>
+          }
+        }
+
+        <!-- Advanced Settings Section -->
+        @if (hasAdvancedSection()) {
+          <div class="gw-divider"></div>
+          <button
+            type="button"
+            class="gw-collapsible-trigger"
+            (click)="advancedOpen.set(!advancedOpen())"
+          >
+            <span>Advanced settings</span>
+            <fs-icon [name]="advancedOpen() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+          </button>
+
+          @if (advancedOpen()) {
+            <div class="gw-advanced-body">
+              @if (def.parameters.supportsStopSequence) {
+                <div class="gw-stop-seq">
+                  <span class="gw-label">Add stop sequence</span>
+                  <div class="gw-stop-input-row">
+                    <input
+                      type="text"
+                      class="fs-input gw-stop-input"
+                      placeholder="Add stop..."
+                      [value]="stopSequenceDraft()"
+                      (input)="stopSequenceDraft.set($any($event.target).value)"
+                      (keydown.enter)="$event.preventDefault(); addStopSequence()"
+                    />
+                    <button
+                      type="button"
+                      fsBtn
+                      variant="ghost"
+                      size="sm"
+                      (click)="addStopSequence()"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  @if ((rs.stopSequences ?? []).length > 0) {
+                    <div class="gw-stop-chips">
+                      @for (seq of rs.stopSequences ?? []; track seq) {
+                        <span class="gw-chip">
+                          <code>{{ seq }}</code>
+                          <button type="button" (click)="removeStopSequence(seq)">×</button>
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (def.parameters.outputLength; as outLenSpec) {
+                <div class="gw-row">
+                  <span class="gw-label">Output length</span>
+                  <input
+                    type="number"
+                    class="fs-input fs-input--mono gw-num-wide"
+                    [min]="outLenSpec.min"
+                    [max]="outLenSpec.max"
+                    [value]="rs.outputLength ?? outLenSpec.default"
+                    (input)="patchRunSetting('outputLength', +$any($event.target).value)"
+                  />
+                </div>
+              }
+
+              @if (def.parameters.topP; as topPSpec) {
+                <div class="gw-row">
+                  <span class="gw-label">Top P</span>
+                  <div class="gw-slider-controls">
+                    <input
+                      type="range"
+                      class="gw-range"
+                      [min]="topPSpec.min"
+                      [max]="topPSpec.max"
+                      [step]="topPSpec.step"
+                      [value]="rs.topP ?? topPSpec.default"
+                      (input)="patchRunSetting('topP', +$any($event.target).value)"
+                    />
+                    <input
+                      type="number"
+                      class="fs-input fs-input--mono gw-num-box"
+                      [min]="topPSpec.min"
+                      [max]="topPSpec.max"
+                      [step]="topPSpec.step"
+                      [value]="rs.topP ?? topPSpec.default"
+                      (input)="patchRunSetting('topP', +$any($event.target).value)"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+  </section>
+}

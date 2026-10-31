@@ -1,0 +1,34 @@
+@use 'styles' as *;
+
+:host {
+  display: grid;
+  height: 100dvh;
+  grid-template-columns: var(--fs-sidebar-width) minmax(0, 1fr);
+  grid-template-rows: layout('context-bar-height') minmax(0, 1fr);
+  grid-template-areas:
+    'sidebar context'
+    'sidebar main';
+
+  &.is-collapsed {
+    --fs-sidebar-width: #{layout('sidebar-collapsed')};
+  }
+
+  transition: grid-template-columns dur('slow') ease('standard');
+}
+
+.shell-sidebar {
+  grid-area: sidebar;
+  min-height: 0;
+}
+
+.shell-context {
+  grid-area: context;
+}
+
+.shell-main {
+  grid-area: main;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}

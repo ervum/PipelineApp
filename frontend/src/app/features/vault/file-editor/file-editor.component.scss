@@ -1,0 +1,85 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.file-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  &__header {
+    @include section-header;
+    background: surface('raised');
+  }
+
+  &__title,
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.file-title-btn {
+  @include interactive-reset;
+  display: inline-flex;
+  align-items: center;
+  gap: space('1.5');
+  color: text-c('primary');
+
+  &:hover {
+    color: accent('violet', '300');
+  }
+}
+
+.name-input {
+  width: 240px;
+  height: 28px;
+}
+
+.dirty-dot {
+  @include status-dot('amber', false);
+}
+
+.editor-pane {
+  height: 100%;
+
+  textarea {
+    width: 100%;
+    height: 100%;
+    resize: none;
+    border: 0;
+    outline: none;
+    padding: space(4);
+    background: surface('sunken');
+    color: text-c('primary');
+    @include mono('sm');
+    line-height: 1.7;
+    tab-size: 2;
+    @include custom-scrollbar;
+  }
+}
+
+.preview-pane {
+  height: 100%;
+  @include scroll-y;
+  padding: space(6);
+  background: surface('base');
+}
+
+.plain-text-preview {
+  @include mono('sm');
+  white-space: pre-wrap;
+  color: text-c('secondary');
+}

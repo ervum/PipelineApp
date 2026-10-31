@@ -1,0 +1,126 @@
+<div class="params-panel">
+  <div class="fs-field">
+    <label class="fs-label">Narrative Scale (Short-Form vs Long-Form)</label>
+    <div class="length-cards" role="radiogroup" aria-label="Narrative Scale">
+      @for (preset of lengthForms; track preset.id) {
+        <button
+          type="button"
+          class="length-card"
+          [class.is-active]="params().lengthForm === preset.id"
+          role="radio"
+          [attr.aria-checked]="params().lengthForm === preset.id"
+          (click)="selectLengthForm(preset)"
+        >
+          <div class="length-card__header">
+            <span class="length-card__title">{{ preset.label }}</span>
+            <span class="length-card__badge mono">{{ preset.rangeLabel }}</span>
+          </div>
+          <p class="length-card__desc">{{ preset.description }}</p>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Lore Category</label>
+    <fs-select
+      [options]="categoryOptions"
+      [value]="params().loreCategory"
+      (valueChange)="$event && patch({ loreCategory: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Tone & Register</label>
+      <fs-select
+        [options]="toneOptions"
+        [value]="params().tone"
+        (valueChange)="$event && patch({ tone: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <label class="fs-label">Narrative Perspective</label>
+      <fs-select
+        [options]="perspectiveOptions"
+        [value]="params().perspective"
+        (valueChange)="$event && patch({ perspective: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <fs-slider
+      label="Target Word Count"
+      [min]="wordSliderRange().min"
+      [max]="wordSliderRange().max"
+      [step]="wordSliderRange().step"
+      [value]="params().targetWordCount"
+      [format]="formatWords"
+      (valueChange)="patch({ targetWordCount: $event })"
+    />
+  </div>
+
+  <div class="fs-field">
+    <fs-toggle
+      label="Structured Section Headings & Callouts"
+      [checked]="params().includeSections"
+      (checkedChange)="patch({ includeSections: $event })"
+    />
+  </div>
+
+  <div class="params-grid-2">
+    <div class="fs-field">
+      <label class="fs-label">Output Format</label>
+      <fs-segmented
+        [options]="outputFormatOptions"
+        [value]="params().outputFormat"
+        (valueChange)="patch({ outputFormat: $event })"
+      />
+    </div>
+
+    <div class="fs-field">
+      <fs-slider
+        label="Batch Variations"
+        [min]="1"
+        [max]="3"
+        [step]="1"
+        [value]="params().batchCount"
+        [format]="formatInt"
+        (valueChange)="patch({ batchCount: $event })"
+      />
+    </div>
+  </div>
+
+  <div class="fs-field">
+    <label class="fs-label">Deterministic Seed</label>
+    <div class="seed-row">
+      <input
+        type="number"
+        class="fs-input mono"
+        placeholder="Random seed on dispatch"
+        [disabled]="seedLocked()"
+        [ngModel]="params().seed"
+        (ngModelChange)="onSeedChange('' + ($event ?? ''))"
+      />
+      <button
+        fsBtn
+        variant="secondary"
+        size="sm"
+        icon="dice"
+        aria-label="Roll random seed"
+        [disabled]="seedLocked()"
+        (click)="rollSeed()"
+      ></button>
+      <button
+        fsBtn
+        variant="ghost"
+        size="sm"
+        [icon]="seedLocked() ? 'lock' : 'unlock'"
+        aria-label="Lock seed"
+        (click)="seedLocked.set(!seedLocked())"
+      ></button>
+    </div>
+  </div>
+</div>

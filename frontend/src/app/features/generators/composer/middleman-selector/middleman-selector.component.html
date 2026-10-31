@@ -1,0 +1,9 @@
+<div class="fs-field">
+  <label class="fs-label">AI Middleman Profile</label>
+  <fs-select
+    [options]="options()"
+    [value]="selectedValue()"
+    (valueChange)="onChange($event)"
+    placeholder="Select Middleman profile..."
+  />
+</div>

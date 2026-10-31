@@ -1,0 +1,109 @@
+<div class="provider-list">
+  <div class="provider-list__header">
+    <span class="fs-label">CONFIGURED PROVIDERS ({{ state.providers().length }})</span>
+    <button
+      type="button"
+      fsBtn
+      variant="primary"
+      size="sm"
+      icon="plus"
+      (click)="catalogModalOpen.set(true)"
+    >
+      Add Provider
+    </button>
+  </div>
+
+  <div class="provider-list__body">
+    @for (tier of tiers; track tier) {
+      <div class="tier-group">
+        <div class="tier-group__head">
+          <fs-tier-badge [tier]="tier" />
+          <span class="fs-micro">{{ state.byTier()[tier].length }}</span>
+        </div>
+
+        @for (p of state.byTier()[tier]; track p.id) {
+          <div
+            class="provider-row"
+            [class.is-selected]="state.selectedProviderId() === p.id"
+            role="button"
+            tabindex="0"
+            (click)="selectProvider.emit(p.id)"
+            (keydown.enter)="selectProvider.emit(p.id)"
+          >
+            <div class="provider-row__top">
+              <span class="health-dot" [attr.data-health]="p.health.state"></span>
+              <span class="provider-row__name">{{ p.name }}</span>
+              @if (p.health.latencyMs !== null) {
+                <span class="fs-mono fs-micro">{{ p.health.latencyMs }}ms</span>
+              }
+              <div (click)="$event.stopPropagation()">
+                <fs-toggle
+                  [checked]="p.isEnabled"
+                  (checkedChange)="onToggleEnabled(p, $event)"
+                />
+              </div>
+            </div>
+
+            <div class="provider-row__bottom">
+              <span class="fs-mono fs-micro">{{ p.kind }}</span>
+              <div class="modality-icons">
+                @for (m of p.modalities; track m) {
+                  <span
+                    class="mod-chip"
+                    [class.is-default]="p.defaultForModalities.includes(m)"
+                    [title]="modalityMeta[m].label + (p.defaultForModalities.includes(m) ? ' (Default)' : '')"
+                  >
+                    <fs-icon [name]="iconForModality(m)" [size]="12" />
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="tier-empty">No providers in this tier</div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<fs-modal [(open)]="catalogModalOpen" size="lg" title="Add Provider from Catalog">
+  <div class="catalog-picker fs-stack">
+    <div class="fs-spread">
+      <p class="fs-small">
+        Choose a Cloud API, RunPod Serverless GPU endpoint, or Local inference engine.
+      </p>
+      <fs-segmented
+        [options]="tierFilterOptions"
+        [(value)]="catalogTierFilter"
+        ariaLabel="Filter catalog by tier"
+      />
+    </div>
+
+    <div class="catalog-grid">
+      @for (entry of filteredCatalog(); track entry.kind) {
+        <button
+          type="button"
+          class="fs-card fs-card--interactive catalog-card"
+          (click)="pickCatalog(entry)"
+        >
+          <div class="fs-card__body">
+            <div class="fs-spread">
+              <span class="fs-h4">{{ entry.label }}</span>
+              <fs-tier-badge [tier]="entry.tier" />
+            </div>
+            <div class="fs-cluster">
+              @for (r of entry.roles; track r) {
+                <span class="fs-badge">{{ r }}</span>
+              }
+            </div>
+            <div class="fs-card__meta">
+              <span>{{ entry.modalities.length }} modalities</span>
+              <span>{{ entry.requiresSecret ? entry.secretLabel : 'No API key required' }}</span>
+            </div>
+          </div>
+        </button>
+      }
+    </div>
+  </div>
+</fs-modal>

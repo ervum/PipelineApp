@@ -1,0 +1,40 @@
+<div class="brand">
+  <span class="brand__mark">
+    <fs-icon name="sparkles" [size]="18" />
+  </span>
+  @if (!studio.sidebarCollapsed()) {
+    <span class="brand__title">ForgeStudio</span>
+  }
+  <button
+    type="button"
+    fsBtn
+    variant="ghost"
+    size="icon"
+    class="brand__collapse fs-btn--sm"
+    [attr.aria-label]="studio.sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    (click)="toggleCollapse()"
+  >
+    <fs-icon [name]="studio.sidebarCollapsed() ? 'chevron-right' : 'list'" [size]="14" />
+  </button>
+</div>
+
+<fs-project-switcher [collapsed]="studio.sidebarCollapsed()" />
+
+<nav class="nav" aria-label="Primary studio navigation">
+  <fs-nav-group
+    title="ASSET GENERATORS"
+    [items]="generatorNavItems()"
+    [collapsed]="studio.sidebarCollapsed()"
+  />
+  <fs-nav-group
+    title="KNOWLEDGE & CONFIG"
+    [items]="knowledgeNavItems()"
+    [collapsed]="studio.sidebarCollapsed()"
+  />
+</nav>
+
+@if (!studio.sidebarCollapsed()) {
+  <div class="queue-slot">
+    <fs-job-queue-widget />
+  </div>
+}

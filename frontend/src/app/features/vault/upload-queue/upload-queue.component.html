@@ -1,0 +1,19 @@
+@if (vault.uploads().length > 0) {
+  <div class="upload-queue">
+    <div class="upload-queue__header">
+      <span class="fs-label">UPLOADS ({{ vault.uploads().length }})</span>
+    </div>
+    @for (u of vault.uploads(); track u.id) {
+      <div class="upload-item">
+        <div class="fs-spread">
+          <span class="upload-item__name">{{ u.name }}</span>
+          <span class="fs-mono fs-micro">{{ u.progress }}%</span>
+        </div>
+        <fs-progress
+          [value]="u.progress"
+          [accent]="u.status === 'error' ? 'coral' : u.status === 'done' ? 'emerald' : 'violet'"
+        />
+      </div>
+    }
+  </div>
+}

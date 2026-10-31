@@ -1,0 +1,39 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.provider-selector {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+}
+
+.provider-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: space(2);
+}
+
+.provider-warning {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+  padding: space(2) space(2);
+  background: accent-alpha('amber', 0.12);
+  border: 1px solid accent-alpha('amber', 0.35);
+  border-radius: radius('sm');
+  font-size: fs('xs');
+  color: accent('amber');
+
+  span {
+    flex: 1;
+  }
+
+  .warning-link {
+    font-weight: fw('semibold');
+    color: text-c('primary');
+    text-decoration: underline;
+  }
+}

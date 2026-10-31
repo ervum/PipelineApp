@@ -1,0 +1,70 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.slider-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: space(1);
+}
+
+.slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: space(2);
+}
+
+.slider-label {
+  @include text('xs', 'medium', 'tight');
+  color: text-c('secondary');
+}
+
+.slider-readout {
+  @include mono('xs');
+  color: text-c('primary');
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: space(2);
+}
+
+.slider-input {
+  flex: 1 1 auto;
+  appearance: none;
+  height: 6px;
+  border-radius: radius('pill');
+  background: surface('sunken');
+  border: 1px solid border-c('default');
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: accent('violet');
+    border: 2px solid text-c('primary');
+    transition: transform dur('instant') ease('standard');
+
+    &:hover {
+      transform: scale(1.15);
+    }
+  }
+
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: accent('violet');
+    border: 2px solid text-c('primary');
+  }
+
+  @include focus-ring;
+  @include disabled;
+}

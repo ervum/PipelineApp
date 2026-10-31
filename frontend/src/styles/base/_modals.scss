@@ -1,0 +1,56 @@
+@use 'sass:map';
+@use 'styles/tokens' as t;
+@use 'styles/functions' as f;
+@use 'styles/mixins' as m;
+
+.fs-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: f.z('modal-backdrop');
+  background: rgba(6, 7, 11, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  @include m.center;
+  padding: f.space(4);
+  animation: fs-fade-in f.dur('fast') f.ease('standard') both;
+}
+
+.fs-modal {
+  position: relative;
+  z-index: f.z('modal');
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 88vh;
+  background: f.surface('raised');
+  border: 1px solid f.border-c('strong');
+  border-radius: f.radius('xl');
+  box-shadow: map.get(t.$shadow, 'xl');
+  animation: fs-scale-in f.dur('base') f.ease('emphasized') both;
+  overflow: hidden;
+
+  &--sm { max-width: 420px; }
+  &--md { max-width: 640px; }
+  &--lg { max-width: 920px; }
+  &--xl { max-width: 1200px; }
+
+  &__header {
+    @include m.section-header;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: f.space(4);
+    @include m.scroll-y;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: f.space(2);
+    padding: f.space(3) f.space(4);
+    @include m.hairline('top');
+  }
+}

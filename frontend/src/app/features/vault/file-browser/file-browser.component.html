@@ -1,0 +1,129 @@
+<div class="file-browser">
+  @if (selectedIds().size > 1) {
+    <div class="bulk-bar">
+      <span class="fs-small">{{ selectedIds().size }} files selected</span>
+      <div class="fs-cluster">
+        <select
+          class="fs-select-native bulk-select"
+          [value]="bulkScopeToApply()"
+          (change)="bulkScopeToApply.set($any($event.target).value)"
+        >
+          @for (s of allScopes; track s) {
+            <option [value]="s">{{ scopeLabels[s] }}</option>
+          }
+        </select>
+        <button type="button" fsBtn variant="secondary" size="sm" (click)="bulkAddScope()">
+          + Add Scope
+        </button>
+        <button type="button" fsBtn variant="ghost" size="sm" (click)="bulkRemoveScope()">
+          − Remove Scope
+        </button>
+        <button type="button" fsBtn variant="ghost" size="sm" (click)="clearSelection()">
+          Clear
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (vault.visibleFiles().length === 0) {
+    <fs-empty-state
+      icon="folder-open"
+      title="No files in this view"
+      message="Create a markdown style guide or drop reference images, audio, or JSON files here."
+    >
+      <button type="button" fsBtn variant="primary" size="sm" icon="plus" (click)="requestNewFile.emit()">
+        New Markdown File
+      </button>
+      <button type="button" fsBtn variant="secondary" size="sm" icon="upload" (click)="requestUpload.emit()">
+        Upload Files
+      </button>
+    </fs-empty-state>
+  } @else if (vault.viewMode() === 'list') {
+    <div class="browser-scroll">
+      <table class="fs-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Context Scopes</th>
+            <th>Priority</th>
+            <th>Tokens</th>
+            <th>Vision</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of vault.visibleFiles(); track f.id) {
+            <tr
+              [class.is-selected]="isSelected(f.id)"
+              draggable="true"
+              (click)="onRowClick(f, $event)"
+              (dblclick)="onRowDoubleClick(f)"
+              (dragstart)="onFileDragStart(f, $event)"
+            >
+              <td>
+                <div class="file-name-cell">
+                  <fs-icon [name]="iconForVaultKind(f.kind)" [size]="15" />
+                  <button type="button" class="file-open-link" (click)="fileOpen.emit(f); $event.stopPropagation()">
+                    {{ f.name }}
+                  </button>
+                </div>
+              </td>
+              <td>
+                <div class="scope-chips">
+                  @for (s of f.scopes; track s) {
+                    <span class="scope-mini-chip" [attr.data-accent]="accentForScope(s)">
+                      {{ scopeLabels[s] }}
+                    </span>
+                  }
+                </div>
+              </td>
+              <td class="fs-mono fs-num">{{ f.priority }}</td>
+              <td class="fs-mono fs-num">~{{ f.tokenEstimate }}</td>
+              <td>
+                @if (f.kind === 'IMAGE') {
+                  <fs-status-pill
+                    [status]="f.visionStatus === 'DONE' ? 'COMPLETED' : f.visionStatus === 'RUNNING' ? 'COMPILING' : f.visionStatus === 'FAILED' ? 'FAILED' : 'QUEUED'"
+                    [label]="f.visionStatus"
+                  />
+                } @else {
+                  <span class="fs-micro">—</span>
+                }
+              </td>
+              <td class="fs-micro">{{ formatRelativeTime(f.updatedAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="browser-scroll browser-grid">
+      @for (f of vault.visibleFiles(); track f.id) {
+        <div
+          class="fs-card fs-card--interactive file-tile"
+          [class.is-selected]="isSelected(f.id)"
+          draggable="true"
+          (click)="onRowClick(f, $event)"
+          (dblclick)="onRowDoubleClick(f)"
+          (dragstart)="onFileDragStart(f, $event)"
+        >
+          <div class="fs-card__media file-tile__media">
+            @if (f.thumbnailUrl || (f.kind === 'IMAGE' && f.contentUrl); as thumb) {
+              <img [src]="thumb" [alt]="f.name" />
+            } @else {
+              <fs-icon [name]="iconForVaultKind(f.kind)" [size]="28" />
+            }
+          </div>
+          <div class="fs-card__body">
+            <button type="button" class="file-open-link" (click)="fileOpen.emit(f); $event.stopPropagation()">
+              {{ f.name }}
+            </button>
+            <div class="fs-card__meta">
+              <span>~{{ f.tokenEstimate }} tok</span>
+              <span>P{{ f.priority }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

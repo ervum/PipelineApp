@@ -1,0 +1,25 @@
+{
+  "name": "forgestudio-control-room",
+  "private": true,
+  "engines": { "node": ">=22.11" },
+  "workspaces": ["shared", "backend", "frontend"],
+  "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:watch": "node scripts/watch-db.mjs",
+    "build:shared": "npm run build -w @forge/shared",
+    "watch:shared": "node scripts/watch-shared.mjs",
+    "watch:backend": "node scripts/watch-backend.mjs",
+    "dev": "npm run build:shared && concurrently -k -n db,shared,api,web -c blue,cyan,magenta,green \"npm run db:watch\" \"npm run watch:shared\" \"npm run watch:backend\" \"npm run start -w @forge/frontend\"",
+    "build": "npm run build:shared && npm run build -w @forge/backend && npm run build -w @forge/frontend",
+    "test": "npm run test -w @forge/shared && npm run test -w @forge/backend",
+    "lint": "eslint . && node scripts/check-forbidden-deps.mjs",
+    "db:reset": "npm run prisma:reset -w @forge/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "eslint": "^9",
+    "typescript-eslint": "^8",
+    "prettier": "^3",
+    "typescript": "~5.9.0"
+  }
+}

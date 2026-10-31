@@ -1,0 +1,67 @@
+<header class="context-bar">
+  <div class="context-bar__left">
+    @if (studio.activeProject(); as proj) {
+      <span class="proj-chip">
+        <span class="proj-chip__dot" [style.background]="proj.accentHex"></span>
+        <span class="proj-chip__name">{{ proj.name }}</span>
+      </span>
+    }
+
+    <button type="button" class="ctx-link" (click)="openVaultFilteredByScope()">
+      <fs-icon name="database" [size]="14" />
+      @if (modalityMeta(); as meta) {
+        <span>{{ contextCount() }} context files for {{ meta.label }}</span>
+      } @else {
+        <span>{{ contextCount() }} vault files</span>
+      }
+    </button>
+
+    @if (providers.defaultProfile(); as prof) {
+      <span class="mm-chip">
+        <fs-icon name="sparkles" [size]="13" />
+        <span>Middleman: {{ prof.name }}</span>
+        <fs-tier-badge [tier]="prof.tier" />
+      </span>
+    }
+  </div>
+
+  <div class="context-bar__right">
+    @if (providers.hasGoogleWebProvider()) {
+      <button
+        type="button"
+        class="ctx-link"
+        title="Show or hide the persistent Google Web / AI Studio browser window"
+        (click)="toggleBrowserWindow()"
+      >
+        <fs-icon name="eye" [size]="13" />
+        <span>{{ providers.browserVisible() ? 'Hide Browser' : 'Show Browser' }}</span>
+      </button>
+
+      @if ((providers.googleWebStatus()?.trackedChatsCount ?? 0) > 0) {
+        <button
+          type="button"
+          class="ctx-link"
+          title="Delete only the web chats created by PipelineApp in the last run"
+          (click)="deleteLastRunChats()"
+        >
+          <fs-icon name="trash" [size]="13" />
+          <span>Delete Last Run Chats</span>
+        </button>
+      }
+    }
+
+    <span class="spend-chip fs-num" title="Total project generation spend">
+      <fs-icon name="dollar" [size]="13" />
+      <span>{{ totalSpendFormatted() }}</span>
+    </span>
+
+    <span
+      class="ws-indicator"
+      [class.is-connected]="socket.connected()"
+      [title]="socket.connected() ? 'Orchestrator WebSocket connected' : 'Reconnecting to Orchestrator…'"
+    >
+      <span class="ws-indicator__dot"></span>
+      <span>{{ socket.connected() ? 'Live' : 'Reconnecting' }}</span>
+    </span>
+  </div>
+</header>

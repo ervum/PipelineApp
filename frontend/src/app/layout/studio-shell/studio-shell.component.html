@@ -1,0 +1,15 @@
+<aside class="shell-sidebar">
+  <fs-sidebar />
+</aside>
+<div class="shell-context">
+  <fs-context-bar />
+</div>
+<main class="shell-main">
+  <router-outlet />
+</main>
+<fs-toast-host />
+<fs-confirm-dialog />
+<fs-project-form-modal
+  [(open)]="studio.projectFormModalOpen"
+  [project]="studio.editingProject()"
+/>

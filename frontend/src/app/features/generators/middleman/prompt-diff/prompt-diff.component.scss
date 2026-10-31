@@ -1,0 +1,67 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.prompt-diff {
+  display: flex;
+  flex-direction: column;
+  gap: space(3);
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(2);
+  }
+
+  &__legend {
+    display: flex;
+    align-items: center;
+    gap: space(3);
+    @include mono('xs');
+
+    .stat-ins {
+      color: accent('cyan', '300');
+    }
+
+    .stat-del {
+      color: accent('coral', '300');
+    }
+  }
+
+  &__split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: space(3);
+
+    .split-col {
+      @include panel('sunken', 'md');
+      padding: space(3);
+      display: flex;
+      flex-direction: column;
+      gap: space(2);
+    }
+  }
+}
+
+.crd-diff {
+  @include text('md', 'regular', 'relaxed');
+  white-space: pre-wrap;
+  padding: space(3);
+  border-radius: radius('md');
+  background: surface('sunken');
+  border: 1px solid border-c('subtle');
+
+  ins {
+    @include diff-insert;
+    text-decoration: none;
+    padding: 0 2px;
+  }
+
+  del {
+    @include diff-delete;
+    padding: 0 2px;
+  }
+}

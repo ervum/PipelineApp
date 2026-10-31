@@ -1,0 +1,119 @@
+@use 'styles' as *;
+
+:host {
+  display: block;
+}
+
+.queue-widget {
+  display: flex;
+  flex-direction: column;
+  gap: space(2);
+  max-height: layout('queue-widget-max-height');
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(1);
+    padding: 0 space(1);
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: space('1.5');
+    @include scroll-y;
+  }
+
+  &__empty {
+    padding: space(3) space(2);
+    text-align: center;
+    @include text('xs', 'regular', 'tight');
+    color: text-c('muted');
+    background: surface('sunken');
+    border-radius: radius('md');
+    border: 1px solid border-c('subtle');
+  }
+}
+
+.summary-chip {
+  padding: 1px 5px;
+  border-radius: radius('xs');
+  @include mono('2xs');
+
+  &--cyan {
+    @include tinted('cyan');
+  }
+  &--amber {
+    @include tinted('amber');
+  }
+  &--emerald {
+    @include tinted('emerald');
+  }
+  &--review {
+    color: accent('amber', '300');
+    border: 1px dashed accent-alpha('amber', 0.55);
+  }
+}
+
+.queue-row {
+  display: flex;
+  flex-direction: column;
+  gap: space(1);
+  padding: space(2);
+  border-radius: radius('md');
+  background: surface('overlay');
+  border: 1px solid border-c('default');
+  cursor: pointer;
+
+  &:hover {
+    border-color: border-c('strong');
+    background: surface('elevated');
+
+    .queue-row__cancel {
+      opacity: 1;
+    }
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: space('1.5');
+  }
+
+  &__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include text('xs', 'medium', 'tight');
+    color: text-c('primary');
+    @include truncate(1);
+  }
+
+  &__elapsed {
+    @include mono('2xs');
+    color: text-c('muted');
+  }
+
+  &__cancel {
+    @include interactive-reset;
+    opacity: 0;
+    color: text-c('muted');
+
+    &:hover {
+      color: accent('coral', '300');
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: space(1);
+  }
+}

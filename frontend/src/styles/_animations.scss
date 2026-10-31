@@ -1,0 +1,26 @@
+@use 'functions' as f;
+@use 'mixins' as m;
+
+@property --fs-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes fs-rotate-angle { to { --fs-angle: 360deg; } }
+@keyframes fs-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+@keyframes fs-pulse-ring { 0% { box-shadow: 0 0 0 0 var(--pulse-color); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes fs-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fs-slide-in-right { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fs-slide-up { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fs-scale-in { from { transform: scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fs-indeterminate { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes fs-caret-blink { 50% { opacity: 0; } }
+@keyframes fs-spin { to { transform: rotate(360deg); } }
+
+.fs-anim-fade { animation: fs-fade-in f.dur('base') f.ease('standard') both; }
+.fs-anim-slide-up { animation: fs-slide-up f.dur('base') f.ease('emphasized') both; }
+.fs-anim-scale { animation: fs-scale-in f.dur('base') f.ease('emphasized') both; }
+
+@include m.reduced-motion {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

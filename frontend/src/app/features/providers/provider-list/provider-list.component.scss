@@ -1,0 +1,127 @@
+@use 'styles' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: surface('raised');
+  @include hairline('right');
+}
+
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  &__header {
+    @include section-header;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: space(3);
+    @include scroll-y;
+    display: flex;
+    flex-direction: column;
+    gap: space(4);
+  }
+}
+
+.tier-group {
+  display: flex;
+  flex-direction: column;
+  gap: space('1.5');
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 space(1);
+  }
+}
+
+.provider-row {
+  @include panel('overlay', 'md');
+  @include card-interactive;
+  padding: space('2') space(3);
+  display: flex;
+  flex-direction: column;
+  gap: space('1.5');
+  cursor: pointer;
+
+  &__top,
+  &__bottom {
+    display: flex;
+    align-items: center;
+    gap: space(2);
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include text('sm', 'semibold', 'tight');
+    @include truncate(1);
+  }
+
+  &__bottom {
+    justify-content: space-between;
+  }
+}
+
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: text-c('muted');
+  flex: none;
+
+  &[data-health='HEALTHY'] {
+    background: accent('emerald');
+  }
+  &[data-health='DEGRADED'] {
+    background: accent('amber');
+  }
+  &[data-health='UNREACHABLE'],
+  &[data-health='UNAUTHORIZED'] {
+    background: accent('coral');
+  }
+}
+
+.modality-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mod-chip {
+  width: 20px;
+  height: 20px;
+  border-radius: radius('xs');
+  background: surface('sunken');
+  border: 1px solid border-c('subtle');
+  color: text-c('muted');
+  @include center;
+
+  &.is-default {
+    @include tinted('violet');
+  }
+}
+
+.tier-empty {
+  padding: space(2);
+  @include text('xs', 'regular', 'tight');
+  color: text-c('muted');
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: space(3);
+}
+
+.catalog-card {
+  text-align: left;
+}

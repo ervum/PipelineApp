@@ -1,0 +1,18 @@
+@use 'functions' as f;
+@use 'mixins' as m;
+
+.fs-h1 { @include m.text('3xl', 'semibold', 'tight'); letter-spacing: -0.02em; }
+.fs-h2 { @include m.text('2xl', 'semibold', 'tight'); letter-spacing: -0.015em; }
+.fs-h3 { @include m.text('lg', 'semibold', 'snug'); }
+.fs-h4 { @include m.text('md', 'semibold', 'snug'); }
+.fs-body { @include m.text('base'); color: f.text-c('secondary'); }
+.fs-small { @include m.text('sm'); color: f.text-c('secondary'); }
+.fs-micro { @include m.text('xs'); color: f.text-c('muted'); }
+.fs-label { @include m.caps-label; }
+.fs-mono { @include m.mono('sm'); }
+.fs-num { font-variant-numeric: tabular-nums; }
+.fs-text-cyan { color: f.accent('cyan', '300'); }
+.fs-text-amber { color: f.accent('amber', '300'); }
+.fs-text-emerald { color: f.accent('emerald', '300'); }
+.fs-text-coral { color: f.accent('coral', '300'); }
+.fs-text-muted { color: f.text-c('muted'); }

@@ -1,0 +1,175 @@
+<div class="templates-layout">
+  <div class="modality-strip" role="tablist">
+    @for (m of modalities; track m) {
+      <button
+        type="button"
+        role="tab"
+        class="modality-tab"
+        [class.is-active]="selectedModality() === m"
+        [attr.aria-selected]="selectedModality() === m"
+        (click)="selectModality(m)"
+      >
+        <fs-icon [name]="modalityMeta[m].icon" [size]="15" />
+        <span>{{ modalityMeta[m].label }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="templates-body">
+    <aside class="versions-sidebar">
+      <div class="scope-switch">
+        <fs-segmented
+          [options]="scopeOptions()"
+          [(value)]="scopeMode"
+        />
+      </div>
+
+      <div class="versions-header">
+        <span>Version History</span>
+        @if (activeProjectTemplate() && scopeMode() === 'global') {
+          <span class="fs-badge fs-badge--info">Has Project Override</span>
+        }
+      </div>
+
+      <div class="versions-list">
+        @for (v of visibleVersions(); track v.id) {
+          <div
+            class="version-card fs-card fs-card--interactive"
+            [class.is-selected]="selectedTemplateId() === v.id"
+            (click)="loadIntoEditor(v)"
+          >
+            <div class="version-card__top">
+              <span class="version-card__ver mono">v{{ v.version }}</span>
+              <span class="version-card__name">{{ v.name }}</span>
+              @if (v.isActive) {
+                <span class="fs-badge fs-badge--ok">Active</span>
+              } @else {
+                <button
+                  fsBtn
+                  variant="ghost"
+                  size="sm"
+                  (click)="activateVersion(v, $event)"
+                >
+                  Activate
+                </button>
+              }
+            </div>
+            <div class="version-card__meta">
+              <span>{{ v.projectId ? 'Project Override' : 'Global Blueprint' }}</span>
+              <span>·</span>
+              <span>{{ formatRelative(v.updatedAt) }}</span>
+            </div>
+          </div>
+        } @empty {
+          <div class="versions-empty">
+            <p>
+              No {{ scopeMode() === 'project' ? 'project override' : 'global' }} versions yet for
+              {{ modalityMeta[selectedModality()].label }}.
+            </p>
+            @if (scopeMode() === 'project' && activeGlobalTemplate()) {
+              <p class="versions-empty-sub">
+                Editing the active global blueprint below — click "Create Project Override" to fork it for
+                <strong>{{ studio.activeProject()?.name }}</strong>.
+              </p>
+            }
+          </div>
+        }
+      </div>
+    </aside>
+
+    <section class="template-editor fs-card">
+      <div class="editor-header">
+        <div>
+          <h4>
+            {{ modalityMeta[selectedModality()].label }} System Blueprint
+            @if (scopeMode() === 'project') {
+              <span class="fs-badge fs-badge--info">Project Override</span>
+            } @else {
+              <span class="fs-badge fs-badge--neutral">Global</span>
+            }
+          </h4>
+        </div>
+
+        <div class="editor-actions">
+          @if (scopeMode() === 'global' && studio.activeProjectId()) {
+            <button
+              fsBtn
+              variant="secondary"
+              size="sm"
+              icon="copy"
+              [loading]="saving()"
+              (click)="saveNewVersion(true)"
+            >
+              Create Project Override
+            </button>
+          }
+          <button
+            fsBtn
+            variant="primary"
+            size="sm"
+            icon="check"
+            [loading]="saving()"
+            (click)="saveNewVersion(false)"
+          >
+            Save as New Version
+          </button>
+        </div>
+      </div>
+
+      <div class="fs-field">
+        <label class="fs-label">Template Name</label>
+        <input
+          class="fs-input"
+          type="text"
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
+          placeholder="e.g. 2D Icons Master Compiler Blueprint"
+        />
+        @if (fieldErrors()['name']) {
+          <span class="fs-error">{{ fieldErrors()['name'] }}</span>
+        }
+      </div>
+
+      <div class="fs-field system-template-field">
+        <div class="label-row">
+          <label class="fs-label">System Prompt Blueprint</label>
+          <span class="token-counter mono">~{{ tokenEstimateCount() }} tokens</span>
+        </div>
+        <textarea
+          class="fs-textarea mono system-textarea"
+          rows="12"
+          [ngModel]="systemTemplate()"
+          (ngModelChange)="systemTemplate.set($event)"
+          placeholder="Enter Middleman system instructions for this modality..."
+        ></textarea>
+        @if (fieldErrors()['systemTemplate']) {
+          <span class="fs-error">{{ fieldErrors()['systemTemplate'] }}</span>
+        }
+      </div>
+
+      <div class="bottom-fields">
+        <div class="fs-field">
+          <label class="fs-label">Default Negative Prompt</label>
+          <textarea
+            class="fs-textarea mono"
+            rows="4"
+            [ngModel]="defaultNegativePrompt()"
+            (ngModelChange)="defaultNegativePrompt.set($event)"
+            placeholder="Terms always appended or seeded into negativePrompt..."
+          ></textarea>
+        </div>
+
+        <div class="fs-field">
+          <label class="fs-label">Hard Constraints</label>
+          <textarea
+            class="fs-textarea mono"
+            rows="4"
+            [ngModel]="hardConstraints()"
+            (ngModelChange)="hardConstraints.set($event)"
+            placeholder="Non-negotiable technical constraints enforced by Middleman..."
+          ></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,64 @@
+<div class="media-preview">
+  <header class="media-preview__toolbar">
+    <div class="media-preview__meta">
+      <span class="fs-h4">{{ file().name }}</span>
+      <span class="fs-mono fs-micro">{{ file().mimeType }} · {{ formatBytes(file().sizeBytes) }}</span>
+      @if (file().width && file().height) {
+        <span class="fs-mono fs-micro">{{ file().width }}×{{ file().height }}px</span>
+      }
+    </div>
+    <div class="media-preview__actions">
+      @if (file().kind === 'IMAGE') {
+        <button type="button" fsBtn variant="ghost" size="sm" (click)="checkerBg.set(!checkerBg())">
+          {{ checkerBg() ? 'Checkerboard' : 'Solid Dark' }}
+        </button>
+        <button type="button" fsBtn variant="ghost" size="sm" (click)="zoomOut()">−</button>
+        <button type="button" fsBtn variant="ghost" size="sm" (click)="resetZoom()">
+          {{ (zoom() * 100).toFixed(0) }}%
+        </button>
+        <button type="button" fsBtn variant="ghost" size="sm" (click)="zoomIn()">+</button>
+      }
+      @if (file().contentUrl) {
+        <button type="button" fsBtn variant="secondary" size="sm" (click)="downloadFile()">
+          <fs-icon name="download" [size]="14" />
+          <span>Download</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="media-preview__stage" [class.is-checker]="file().kind === 'IMAGE' && checkerBg()">
+    @switch (file().kind) {
+      @case ('IMAGE') {
+        @if (file().contentUrl; as url) {
+          <img
+            [src]="url"
+            [alt]="file().name"
+            class="media-preview__img"
+            [style.transform]="'scale(' + zoom() + ')'"
+          />
+        }
+      }
+      @case ('AUDIO') {
+        <div class="media-preview__audio">
+          <fs-waveform-player [src]="file().contentUrl" [height]="112" />
+        </div>
+      }
+      @case ('MODEL_3D') {
+        <div class="media-preview__3d-viewport">
+          <fs-model-viewport
+            [src]="file().contentUrl"
+            [fileName]="file().name"
+            [compact]="true"
+          />
+        </div>
+      }
+      @default {
+        <div class="media-preview__3d">
+          <fs-icon name="file-text" [size]="32" />
+          <div class="fs-small">Binary file ({{ formatBytes(file().sizeBytes) }})</div>
+        </div>
+      }
+    }
+  </div>
+</div>
