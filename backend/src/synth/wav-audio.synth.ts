@@ -582,3 +582,156 @@ export function editWavAudio(
   const durationMs = Math.round((frameCount / sampleRate) * 1000);
   return { wav, durationMs, sampleRate, loopSeamDb };
 }
+
+export interface DialogueTurnSpec {
+  speaker: string;
+  text: string;
+  voiceId?: string;
+  emotion?: string;
+  speed?: number;
+  pauseAfterMs?: number;
+}
+
+export interface SynthesizedDialogueTurn {
+  index: number;
+  speaker: string;
+  fileName: string;
+  wav: Buffer;
+  startMs: number;
+  endMs: number;
+}
+
+/**
+ * Parses a raw script string formatted as "Speaker: [Emotion] Dialogue line" into structured turns.
+ */
+export function parseDialogueScript(
+  scriptText: string,
+  defaultPauseMs = 320,
+): DialogueTurnSpec[] {
+  const lines = scriptText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith('#') && !l.startsWith('//'));
+
+  const turns: DialogueTurnSpec[] = [];
+  for (const line of lines) {
+    const m = /^([^:]{1,60}):\s*(?:\[([^\]]+)\]\s*)?(.+)$/.exec(line);
+    if (m && m[1] && m[3]) {
+      const speaker = m[1].trim();
+      const emotion = m[2]?.trim();
+      const text = m[3].trim();
+      const lowerSpeaker = speaker.toLowerCase();
+      const inferredVoice =
+        lowerSpeaker.includes('valkyrie') ||
+        lowerSpeaker.includes('queen') ||
+        lowerSpeaker.includes('oracle') ||
+        lowerSpeaker.includes('lyra')
+          ? 'soprano'
+          : lowerSpeaker.includes('warden') ||
+              lowerSpeaker.includes('giant') ||
+              lowerSpeaker.includes('demon') ||
+              lowerSpeaker.includes('lord')
+            ? 'bass'
+            : 'baritone';
+
+      turns.push({
+        speaker,
+        text,
+        ...(emotion ? { emotion } : {}),
+        voiceId: inferredVoice,
+        pauseAfterMs: defaultPauseMs,
+      });
+    }
+  }
+  return turns;
+}
+
+/**
+ * 6.3 Multi-Speaker Dialogue Scene Sequencer: synthesizes each speaker turn,
+ * stitches all turns with configurable inter-turn pauses into a master WAV,
+ * and computes a unified scene-wide word alignment timeline.
+ */
+export function synthesizeDialogueScene(opts: {
+  turns: DialogueTurnSpec[];
+  seed?: number;
+  sampleRate?: number;
+  defaultPauseMs?: number;
+}): {
+  masterWav: Buffer;
+  turnStems: SynthesizedDialogueTurn[];
+  alignment: VoiceAlignment;
+  durationMs: number;
+  sampleRate: number;
+} {
+  const sampleRate = opts.sampleRate ?? 24000;
+  const baseSeed = opts.seed ?? 1001;
+  const defaultPauseMs = opts.defaultPauseMs ?? 320;
+
+  const turnStems: SynthesizedDialogueTurn[] = [];
+  const mergedWords: Array<{ word: string; startMs: number; endMs: number }> = [];
+  const pcmChunks: Buffer[] = [];
+  let cursorMs = 0;
+
+  for (let i = 0; i < opts.turns.length; i++) {
+    const turn = opts.turns[i]!;
+    const synth = synthesizeVoice({
+      seed: baseSeed + i * 37,
+      transcript: turn.text,
+      voiceId: turn.voiceId ?? (i % 2 === 0 ? 'baritone' : 'soprano'),
+      speed: turn.speed ?? 1.0,
+      sampleRate,
+    });
+
+    const startMs = cursorMs;
+    const endMs = startMs + synth.durationMs;
+    const safeSpeaker = turn.speaker
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .toLowerCase();
+
+    turnStems.push({
+      index: i,
+      speaker: turn.speaker,
+      fileName: `turn_${String(i + 1).padStart(2, '0')}_${safeSpeaker}.wav`,
+      wav: synth.wav,
+      startMs,
+      endMs,
+    });
+
+    for (let wIdx = 0; wIdx < synth.alignment.words.length; wIdx++) {
+      const w = synth.alignment.words[wIdx]!;
+      mergedWords.push({
+        word: wIdx === 0 ? `[${turn.speaker}] ${w.word}` : w.word,
+        startMs: startMs + w.startMs,
+        endMs: startMs + w.endMs,
+      });
+    }
+
+    // Extract raw PCM16 payload after 44-byte WAV header
+    const pcmData = synth.wav.subarray(44);
+    pcmChunks.push(pcmData);
+
+    const pauseMs =
+      i < opts.turns.length - 1 ? (turn.pauseAfterMs ?? defaultPauseMs) : 0;
+    if (pauseMs > 0) {
+      const pauseSamples = Math.floor((pauseMs / 1000) * sampleRate);
+      pcmChunks.push(Buffer.alloc(pauseSamples * 2, 0));
+    }
+    cursorMs = endMs + pauseMs;
+  }
+
+  const totalPcm = Buffer.concat(pcmChunks);
+  const totalSamples = Math.floor(totalPcm.length / 2);
+  const floatSamples = new Float32Array(totalSamples);
+  for (let i = 0; i < totalSamples; i++) {
+    floatSamples[i] = totalPcm.readInt16LE(i * 2) / 32768;
+  }
+
+  const masterWav = encodeWavPcm16([floatSamples], sampleRate);
+  return {
+    masterWav,
+    turnStems,
+    alignment: { words: mergedWords, source: 'PROVIDER' },
+    durationMs: cursorMs,
+    sampleRate,
+  };
+}

@@ -1,8 +1,14 @@
 import {
+  ApprovalStatus,
+  AssetFileRole,
+  AssetModel,
+  BatchMatrixJobDto,
   CreateArenaJobDto,
+  CreateDialogueSceneDto,
   CreateJobDto,
   ErrorCode,
   ExecutionMode,
+  ExecutionTier,
   GenerationSubMode,
   JobEventModel,
   JobListQueryDto,
@@ -13,6 +19,7 @@ import {
   Paginated,
   ProviderKind,
   RecompileDto,
+  RunPipelineDto,
   SEED_MAX,
   TERMINAL_JOB_STATUSES,
   UpdateCompiledDto,
@@ -20,6 +27,7 @@ import {
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DomainError } from '../common/errors/domain.error';
+import { toAssetModel } from '../common/mappers/asset.mapper';
 import {
   GenerationJobWithRelations,
   toJobEventModel,
@@ -31,7 +39,12 @@ import {
 } from '../orchestrator/job-events.port';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
+import { StorageKeys } from '../storage/storage-keys';
 import { StorageService } from '../storage/storage.service';
+import {
+  parseDialogueScript,
+  synthesizeDialogueScene,
+} from '../synth/wav-audio.synth';
 import { GeneratorAdapterRegistry } from './generator-adapter.registry';
 import { JobProcessorService } from './job-processor.service';
 import { JobStateService } from './job-state.service';
@@ -812,6 +825,334 @@ export class JobsService {
       byProvider,
       dailySeries,
     };
+  }
+
+  /**
+   * 6.1 Cross-Modality Pipeline Recipe Engine: topologically sorts multi-step generation DAGs,
+   * interpolates upstream step outputs ({{steps.stepId.key}}) into downstream prompts and params,
+   * and dispatches each step in dependency order.
+   */
+  async runPipeline(dto: RunPipelineDto): Promise<{
+    pipelineRunId: string;
+    name: string;
+    stepResults: Array<{
+      stepId: string;
+      job: JobModel;
+      resolvedPrompt: string;
+    }>;
+  }> {
+    const pipelineRunId = `pipe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Topological sort with cycle detection
+    const stepById = new Map(dto.steps.map((s) => [s.stepId, s]));
+    const visited = new Set<string>();
+    const visiting = new Set<string>();
+    const orderedSteps: typeof dto.steps = [];
+
+    const visit = (stepId: string): void => {
+      if (visited.has(stepId)) return;
+      if (visiting.has(stepId)) {
+        throw new DomainError(
+          ErrorCode.VALIDATION_FAILED,
+          400,
+          `Pipeline recipe contains a dependency cycle involving step "${stepId}"`,
+        );
+      }
+      const step = stepById.get(stepId);
+      if (!step) {
+        throw new DomainError(
+          ErrorCode.VALIDATION_FAILED,
+          400,
+          `Pipeline step references unknown dependency "${stepId}"`,
+        );
+      }
+      visiting.add(stepId);
+      for (const dep of step.dependsOn) {
+        visit(dep);
+      }
+      visiting.delete(stepId);
+      visited.add(stepId);
+      orderedSteps.push(step);
+    };
+
+    for (const s of dto.steps) {
+      visit(s.stepId);
+    }
+
+    const stepOutputs = new Map<string, Record<string, string>>();
+    const stepResults: Array<{
+      stepId: string;
+      job: JobModel;
+      resolvedPrompt: string;
+    }> = [];
+
+    const interpolateSteps = (input: string): string =>
+      input.replace(
+        /\{\{\s*steps\.([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\s*\}\}/g,
+        (_m, sid: string, field: string) =>
+          stepOutputs.get(sid)?.[field] ?? `{{steps.${sid}.${field}}}`,
+      );
+
+    for (const step of orderedSteps) {
+      const resolvedPrompt = interpolateSteps(step.rawPrompt);
+      const clonedParams = JSON.parse(
+        interpolateSteps(JSON.stringify(step.params)),
+      ) as ModalityParams;
+
+      const job = await this.create({
+        projectId: dto.projectId,
+        executionMode: 'AUTO_FIRE',
+        rawPrompt: resolvedPrompt,
+        pinnedFileIds: [],
+        params: clonedParams,
+        advanced: {
+          __pipelineRunId: pipelineRunId,
+          __pipelineStepId: step.stepId,
+        },
+        providerConfigId: step.providerConfigId,
+        providerModel: step.providerModel ?? null,
+        middlemanProfileId: null,
+        skipMiddleman: dto.skipMiddleman ?? false,
+        parentAssetId: null,
+      });
+
+      stepOutputs.set(step.stepId, {
+        jobId: job.id,
+        rawPrompt: resolvedPrompt,
+        enhancedPrompt: resolvedPrompt,
+        ...(step.outputs ?? {}),
+      });
+      stepResults.push({ stepId: step.stepId, job, resolvedPrompt });
+    }
+
+    return {
+      pipelineRunId,
+      name: dto.name,
+      stepResults,
+    };
+  }
+
+  /**
+   * 6.2 Data-Driven Batch Matrix Runner: expands CSV/JSON rows or cartesian variable arrays
+   * into interpolated prompts and dispatches all jobs under a shared batchMatrixId.
+   */
+  async createBatchMatrix(dto: BatchMatrixJobDto): Promise<{
+    batchMatrixId: string;
+    count: number;
+    jobs: JobModel[];
+  }> {
+    let rows: Array<Record<string, string | number>> = [];
+    if (dto.rows && dto.rows.length > 0) {
+      rows = dto.rows.slice(0, 32);
+    } else if (dto.variables && Object.keys(dto.variables).length > 0) {
+      const entries = Object.entries(dto.variables);
+      let acc: Array<Record<string, string>> = [{}];
+      for (const [key, vals] of entries) {
+        const next: Array<Record<string, string>> = [];
+        for (const prefix of acc) {
+          for (const val of vals) {
+            if (next.length < 32) {
+              next.push({ ...prefix, [key]: val });
+            }
+          }
+        }
+        acc = next;
+      }
+      rows = acc;
+    }
+
+    if (rows.length === 0) {
+      throw new DomainError(
+        ErrorCode.VALIDATION_FAILED,
+        400,
+        'Batch matrix requires either non-empty rows or variables',
+      );
+    }
+
+    const batchMatrixId = `mtx_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const jobs: JobModel[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]!;
+      const interpolatedPrompt = dto.promptTemplate.replace(
+        /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/g,
+        (_m, col: string) =>
+          row[col] !== undefined ? String(row[col]) : `{{${col}}}`,
+      );
+
+      const job = await this.create({
+        projectId: dto.projectId,
+        executionMode: dto.executionMode,
+        rawPrompt: interpolatedPrompt,
+        pinnedFileIds: [],
+        params: dto.params,
+        advanced: {
+          __batchMatrixId: batchMatrixId,
+          __matrixRowIndex: i,
+        },
+        providerConfigId: dto.providerConfigId,
+        providerModel: dto.providerModel ?? null,
+        middlemanProfileId: null,
+        skipMiddleman: dto.skipMiddleman ?? false,
+        parentAssetId: null,
+      });
+      jobs.push(job);
+    }
+
+    return { batchMatrixId, count: jobs.length, jobs };
+  }
+
+  /**
+   * 6.3 Multi-Speaker Dialogue Scene Sequencer: synthesizes a multi-character dialogue script,
+   * stitches the master scene WAV with configurable pauses, and stores both the master VOICES
+   * asset and per-turn STEM files.
+   */
+  async createDialogueScene(dto: CreateDialogueSceneDto): Promise<AssetModel> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: dto.projectId },
+    });
+    if (!project) {
+      throw new DomainError(
+        ErrorCode.NOT_FOUND,
+        404,
+        `Project not found: ${dto.projectId}`,
+      );
+    }
+
+    const turns =
+      dto.turns && dto.turns.length > 0
+        ? dto.turns.map((t) => ({
+            ...t,
+            pauseAfterMs: t.pauseAfterMs ?? dto.pauseBetweenTurnsMs,
+          }))
+        : dto.scriptText
+          ? parseDialogueScript(dto.scriptText, dto.pauseBetweenTurnsMs)
+          : [];
+
+    if (turns.length === 0) {
+      throw new DomainError(
+        ErrorCode.VALIDATION_FAILED,
+        400,
+        'Dialogue scene requires either structured turns[] or valid "Speaker: Line" scriptText',
+      );
+    }
+
+    const scene = synthesizeDialogueScene({
+      turns,
+      seed: dto.seed ?? 1001,
+      defaultPauseMs: dto.pauseBetweenTurnsMs,
+    });
+
+    const assetId = `ast_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    const assetGroupId = `grp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    const masterKey = StorageKeys.assetFile(
+      project.slug,
+      Modality.VOICES,
+      assetId,
+      1,
+      'dialogue_scene.wav',
+    );
+    await this.storage.putBuffer(masterKey, scene.masterWav, 'audio/wav');
+
+    const fileCreates: Array<{
+      role: AssetFileRole;
+      storageKey: string;
+      fileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      width: number | null;
+      height: number | null;
+      durationMs: number | null;
+      format: string;
+      sortIndex: number;
+    }> = [
+      {
+        role: AssetFileRole.PRIMARY,
+        storageKey: masterKey,
+        fileName: 'dialogue_scene.wav',
+        mimeType: 'audio/wav',
+        sizeBytes: scene.masterWav.length,
+        width: null,
+        height: null,
+        durationMs: scene.durationMs,
+        format: 'wav',
+        sortIndex: 0,
+      },
+    ];
+
+    for (let i = 0; i < scene.turnStems.length; i++) {
+      const st = scene.turnStems[i]!;
+      const stemKey = StorageKeys.assetFile(
+        project.slug,
+        Modality.VOICES,
+        assetId,
+        1,
+        st.fileName,
+      );
+      await this.storage.putBuffer(stemKey, st.wav, 'audio/wav');
+      fileCreates.push({
+        role: AssetFileRole.STEM,
+        storageKey: stemKey,
+        fileName: st.fileName,
+        mimeType: 'audio/wav',
+        sizeBytes: st.wav.length,
+        width: null,
+        height: null,
+        durationMs: st.endMs - st.startMs,
+        format: 'wav',
+        sortIndex: i + 1,
+      });
+    }
+
+    const transcriptText = turns
+      .map((t) => `${t.speaker}: ${t.text}`)
+      .join('\n');
+
+    const created = await this.prisma.generatedAsset.create({
+      data: {
+        id: assetId,
+        projectId: project.id,
+        jobId: null,
+        modality: Modality.VOICES,
+        subMode: GenerationSubMode.STANDARD,
+        title: dto.title,
+        assetGroupId,
+        version: 1,
+        batchIndex: 0,
+        parentAssetId: null,
+        rawPrompt: transcriptText,
+        enhancedPrompt: transcriptText,
+        negativePrompt: '',
+        providerConfigId: null,
+        providerKind: ProviderKind.DEMO,
+        providerModel: 'dialogue-sequencer-v1',
+        tier: ExecutionTier.FREE,
+        seed: dto.seed ?? 1001,
+        costUsd: 0,
+        executionMs: 50,
+        approval: ApprovalStatus.DRAFT,
+        isFavorite: false,
+        tags: ['dialogue-scene', 'multi-speaker'],
+        notes: `${turns.length} speaker turns`,
+        metadata: {
+          modality: 'VOICES',
+          durationMs: scene.durationMs,
+          voiceProfileId: null,
+          transcript: transcriptText,
+          alignment: scene.alignment,
+          sampleRate: scene.sampleRate,
+        } as unknown as Prisma.InputJsonValue,
+        files: {
+          create: fileCreates,
+        },
+      },
+      include: {
+        files: true,
+        savedToVault: { select: { id: true } },
+      },
+    });
+
+    return toAssetModel(created);
   }
 
   private async findOrThrow(id: string): Promise<GenerationJobWithRelations> {

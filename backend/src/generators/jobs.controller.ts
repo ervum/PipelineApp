@@ -1,6 +1,11 @@
 import {
+  AssetModel,
+  BatchMatrixJobDto,
+  BatchMatrixJobSchema,
   CreateArenaJobDto,
   CreateArenaJobSchema,
+  CreateDialogueSceneDto,
+  CreateDialogueSceneSchema,
   CreateJobDto,
   CreateJobSchema,
   JobEventModel,
@@ -10,6 +15,8 @@ import {
   Paginated,
   RecompileDto,
   RecompileSchema,
+  RunPipelineDto,
+  RunPipelineSchema,
   UpdateCompiledDto,
   UpdateCompiledSchema,
 } from '@forge/shared';
@@ -42,6 +49,30 @@ export class JobsController {
     @ZodBody(CreateArenaJobSchema) dto: CreateArenaJobDto,
   ): Promise<{ arenaGroupId: string; jobs: JobModel[] }> {
     return this.jobsService.createArena(dto);
+  }
+
+  @Post('pipeline')
+  @HttpCode(HttpStatus.CREATED)
+  async runPipeline(
+    @ZodBody(RunPipelineSchema) dto: RunPipelineDto,
+  ): Promise<ReturnType<JobsService['runPipeline']>> {
+    return this.jobsService.runPipeline(dto);
+  }
+
+  @Post('batch-matrix')
+  @HttpCode(HttpStatus.CREATED)
+  async createBatchMatrix(
+    @ZodBody(BatchMatrixJobSchema) dto: BatchMatrixJobDto,
+  ): Promise<ReturnType<JobsService['createBatchMatrix']>> {
+    return this.jobsService.createBatchMatrix(dto);
+  }
+
+  @Post('dialogue-scene')
+  @HttpCode(HttpStatus.CREATED)
+  async createDialogueScene(
+    @ZodBody(CreateDialogueSceneSchema) dto: CreateDialogueSceneDto,
+  ): Promise<AssetModel> {
+    return this.jobsService.createDialogueScene(dto);
   }
 
   @Get('analytics/summary')

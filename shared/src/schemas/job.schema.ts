@@ -96,8 +96,60 @@ export const CreateArenaJobSchema = z.object({
   skipMiddleman: z.boolean().default(false),
 });
 
+export const PipelineStepSchema = z.object({
+  stepId: z.string().trim().min(1).max(64),
+  rawPrompt: z.string().trim().min(1).max(4000),
+  params: ModalityParamsSchema,
+  providerConfigId: IdSchema,
+  providerModel: z.string().max(200).nullable().optional().default(null),
+  dependsOn: z.array(z.string()).default([]),
+  outputs: z.record(z.string()).optional(),
+});
+
+export const RunPipelineSchema = z.object({
+  projectId: IdSchema,
+  name: z.string().trim().min(1).max(120).default('Multi-Step Pipeline'),
+  steps: z.array(PipelineStepSchema).min(1).max(8),
+  skipMiddleman: z.boolean().default(false),
+});
+
+export const BatchMatrixJobSchema = z.object({
+  projectId: IdSchema,
+  promptTemplate: z.string().trim().min(1).max(4000),
+  rows: z.array(z.record(z.union([z.string(), z.number()]))).max(32).optional(),
+  variables: z.record(z.array(z.string().min(1)).min(1).max(16)).optional(),
+  params: ModalityParamsSchema,
+  providerConfigId: IdSchema,
+  providerModel: z.string().max(200).nullable().optional().default(null),
+  executionMode: z.enum(['AUTO_FIRE', 'INTERCEPT']).default('AUTO_FIRE'),
+  skipMiddleman: z.boolean().default(false),
+});
+
+export const DialogueTurnInputSchema = z.object({
+  speaker: z.string().trim().min(1).max(80),
+  text: z.string().trim().min(1).max(2000),
+  voiceId: z.string().max(120).optional(),
+  emotion: z.string().max(40).optional(),
+  speed: z.number().min(0.7).max(1.3).optional(),
+  pauseAfterMs: z.number().int().min(0).max(5000).optional(),
+});
+
+export const CreateDialogueSceneSchema = z.object({
+  projectId: IdSchema,
+  title: z.string().trim().min(1).max(160).default('Dialogue Scene'),
+  scriptText: z.string().max(12_000).optional(),
+  turns: z.array(DialogueTurnInputSchema).max(32).optional(),
+  pauseBetweenTurnsMs: z.number().int().min(0).max(5000).default(320),
+  seed: z.number().int().min(0).optional(),
+});
+
 export type CreateJobDto = z.infer<typeof CreateJobSchema>;
 export type CreateArenaJobDto = z.infer<typeof CreateArenaJobSchema>;
+export type PipelineStepDto = z.infer<typeof PipelineStepSchema>;
+export type RunPipelineDto = z.infer<typeof RunPipelineSchema>;
+export type BatchMatrixJobDto = z.infer<typeof BatchMatrixJobSchema>;
+export type DialogueTurnInputDto = z.infer<typeof DialogueTurnInputSchema>;
+export type CreateDialogueSceneDto = z.infer<typeof CreateDialogueSceneSchema>;
 export type UpdateCompiledDto = z.infer<typeof UpdateCompiledSchema>;
 export type RecompileDto = z.infer<typeof RecompileSchema>;
 export type JobListQueryDto = z.infer<typeof JobListQuerySchema>;
