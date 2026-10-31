@@ -23,6 +23,8 @@ export const AssetFileRole = {
   ALIGNMENT: 'ALIGNMENT',
   METADATA: 'METADATA',
   SOURCE_REFERENCE: 'SOURCE_REFERENCE',
+  LOD1: 'LOD1',
+  LOD2: 'LOD2',
 } as const;
 export type AssetFileRole = (typeof AssetFileRole)[keyof typeof AssetFileRole];
 export const ASSET_FILE_ROLES: readonly AssetFileRole[] = Object.values(AssetFileRole);

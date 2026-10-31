@@ -219,11 +219,6 @@ export class OutputIngestionService {
         });
         filesToStore.push(...res.extraFiles);
       } else if (modality === Modality.IMAGES) {
-        const [probe, thumb] = await Promise.all([
-          this.imageProc.probe(primaryBuf),
-          this.imageProc.thumbnail(primaryBuf, 384),
-        ]);
-
         const imgParams =
           ctx.params.modality === Modality.IMAGES ? ctx.params : null;
         const aspectPreset = imgParams?.aspectPreset ?? 'SQUARE_1_1';
@@ -232,10 +227,21 @@ export class OutputIngestionService {
           imgParams?.imageCategory === 'PBR_TEXTURE';
 
         let tileSeamScore: number | undefined;
+        let unblendedSourceBuf: Buffer | null = null;
         if (isSeamless) {
-          const seam = await this.imageProc.makeTileable(primaryBuf);
+          const seam = await this.imageProc.makeSeamless(primaryBuf);
           tileSeamScore = seam.seamScore;
+          if (seam.blended) {
+            unblendedSourceBuf = primaryBuf;
+            primaryBuf = seam.buffer;
+            primaryMime = 'image/png';
+          }
         }
+
+        const [probe, thumb] = await Promise.all([
+          this.imageProc.probe(primaryBuf),
+          this.imageProc.thumbnail(primaryBuf, 384),
+        ]);
 
         metadata = {
           modality: 'IMAGES',
@@ -264,6 +270,17 @@ export class OutputIngestionService {
           height: 384,
           format: 'webp',
         });
+        if (unblendedSourceBuf) {
+          filesToStore.push({
+            role: AssetFileRole.SOURCE_REFERENCE,
+            fileName: 'source_unblended.png',
+            mimeType: 'image/png',
+            buffer: unblendedSourceBuf,
+            width: probe.width,
+            height: probe.height,
+            format: 'png',
+          });
+        }
       } else if (modality === Modality.VIDEO) {
         const vidParams =
           ctx.params.modality === Modality.VIDEO ? ctx.params : null;
@@ -477,10 +494,20 @@ export class OutputIngestionService {
         modality === Modality.OTHER &&
         subMode === GenerationSubMode.VFX_TEXTURE
       ) {
-        const [probe, thumb, seam] = await Promise.all([
+        const vfxParams =
+          ctx.params.modality === Modality.OTHER ? ctx.params.vfx : null;
+        let unblendedSourceBuf: Buffer | null = null;
+        const seam = vfxParams?.tileable
+          ? await this.imageProc.makeSeamless(primaryBuf)
+          : await this.imageProc.makeTileable(primaryBuf);
+        if ('blended' in seam && seam.blended) {
+          unblendedSourceBuf = primaryBuf;
+          primaryBuf = seam.buffer;
+          primaryMime = 'image/png';
+        }
+        const [probe, thumb] = await Promise.all([
           this.imageProc.probe(primaryBuf),
           this.imageProc.thumbnail(primaryBuf, 384),
-          this.imageProc.makeTileable(primaryBuf),
         ]);
         metadata = {
           modality: 'OTHER',
@@ -507,6 +534,17 @@ export class OutputIngestionService {
           height: 384,
           format: 'webp',
         });
+        if (unblendedSourceBuf) {
+          filesToStore.push({
+            role: AssetFileRole.SOURCE_REFERENCE,
+            fileName: 'source_unblended.png',
+            mimeType: 'image/png',
+            buffer: unblendedSourceBuf,
+            width: probe.width,
+            height: probe.height,
+            format: 'png',
+          });
+        }
       } else if (modality === Modality.ASSETS_3D) {
         const meshMeta = this.model3dPost.inspectGlb(
           primaryBuf,
@@ -558,16 +596,65 @@ export class OutputIngestionService {
             });
           }
         }
+
+        if (!filesToStore.some((f) => f.role === AssetFileRole.THUMBNAIL)) {
+          const autoThumb = await this.model3dPost.renderGlbThumbnail(
+            primaryBuf,
+            384,
+          );
+          if (autoThumb) {
+            filesToStore.push({
+              role: AssetFileRole.THUMBNAIL,
+              fileName: 'thumb.webp',
+              mimeType: 'image/webp',
+              buffer: autoThumb,
+              width: 384,
+              height: 384,
+              format: 'webp',
+            });
+          }
+        }
+
+        if (params3d?.generateLods !== false) {
+          const lods = this.model3dPost.generateGlbLods(primaryBuf);
+          if (lods.lod1) {
+            filesToStore.push({
+              role: AssetFileRole.LOD1,
+              fileName: 'model_lod1.glb',
+              mimeType: 'model/gltf-binary',
+              buffer: lods.lod1,
+              format: 'glb',
+            });
+          }
+          if (lods.lod2) {
+            filesToStore.push({
+              role: AssetFileRole.LOD2,
+              fileName: 'model_lod2.glb',
+              mimeType: 'model/gltf-binary',
+              buffer: lods.lod2,
+              format: 'glb',
+            });
+          }
+        }
       } else if (
         modality === Modality.MUSIC ||
         modality === Modality.VOICES ||
         modality === Modality.SFX
       ) {
+        const audioMetaInput =
+          modality === Modality.VOICES
+            ? {
+                ...(primaryOut.metadata ?? {}),
+                transcript:
+                  primaryOut.metadata?.['transcript'] ??
+                  ctx.compiled.enhancedPrompt,
+              }
+            : primaryOut.metadata;
         const audioRes = this.audioPost.process(
           primaryBuf,
           primaryMime,
           primaryName,
-          primaryOut.metadata,
+          audioMetaInput,
         );
         primaryBuf = audioRes.primaryBuffer;
         primaryMime = audioRes.mimeType;

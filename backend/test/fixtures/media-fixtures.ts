@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { synthesizeGlbMesh } from '../../src/synth/glb-mesh.synth';
-import { synthesizeWavAudio } from '../../src/synth/wav-audio.synth';
+import { synthesizeSfx } from '../../src/synth/wav-audio.synth';
 
 /**
  * Deterministic media fixtures for post-processor and ingestion tests (Phases 0-2).
@@ -57,26 +57,26 @@ export async function createSeamedTilePng(size = 64): Promise<Buffer> {
 }
 
 export function createSampleWavBuffer(durationSec = 1.0): Buffer {
-  return synthesizeWavAudio({
-    kind: 'SFX',
+  return synthesizeSfx({
+    category: 'WEAPON_HIT',
     seed: 42,
     durationSec,
     sampleRate: 22050,
-  }).wavBuffer;
+  }).wav;
 }
 
 export function createSampleGlbBuffer(): Buffer {
   return synthesizeGlbMesh({
+    prompt: 'Crystal greatsword #7C3AED',
     seed: 101,
     category: 'WEAPON',
-    polycountTier: 'LOW_POLY',
-    accentHex: '#7C3AED',
-  }).glbBuffer;
+  }).glb;
 }
 
 export function createSampleObjBuffer(): Buffer {
   const objText = [
     '# Sample pyramid mesh',
+    'mtllib pyramid.mtl',
     'v -1.0 0.0 -1.0',
     'v  1.0 0.0 -1.0',
     'v  1.0 0.0  1.0',

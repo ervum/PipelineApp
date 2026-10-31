@@ -58,7 +58,9 @@ export const Icons2DParamsSchema = z.object({
   frameShape: z
     .enum(['NONE', 'CIRCLE', 'ROUNDED_SQUARE', 'HEXAGON', 'SHIELD', 'DIAMOND'])
     .default('NONE'),
+  frameStrokeHex: HexColorSchema.nullable().optional().default(null),
   removeBackground: z.boolean().default(true),
+  bgRemovalTolerance: z.number().int().min(5).max(120).optional().default(38),
   solidBackgroundHex: HexColorSchema.nullable().default(null),
   outputSize: z.union([z.literal(512), z.literal(1024)]).default(1024),
   batchCount: z.number().int().min(1).max(4).default(1),
@@ -79,6 +81,7 @@ export const Assets3DParamsSchema = z
     outputFormat: z.enum(['glb', 'fbx', 'obj']).default('glb'),
     pose: z.enum(['NONE', 'T_POSE', 'A_POSE']).default('NONE'),
     enablePbr: z.boolean().default(true),
+    generateLods: z.boolean().optional().default(true),
     topology: z.enum(['TRIANGLE', 'QUAD']).default('TRIANGLE'),
     seed,
   })

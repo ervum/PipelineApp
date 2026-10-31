@@ -43,6 +43,11 @@ export class VoiceAlignmentViewComponent {
     return m.modality === 'VOICES' ? m : null;
   });
 
+  readonly isEstimatedTiming = computed(() => {
+    const align = this.voiceMeta()?.alignment;
+    return !align || align.source === 'ESTIMATED';
+  });
+
   readonly voiceProfileName = computed(() => {
     const profileId = this.voiceMeta()?.voiceProfileId;
     if (!profileId) return 'Default Studio Voice';

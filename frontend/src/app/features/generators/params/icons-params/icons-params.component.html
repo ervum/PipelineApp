@@ -83,6 +83,26 @@
         </button>
       }
     </div>
+    @if (params().frameShape !== 'NONE') {
+      <div class="color-picker-row">
+        <label class="fs-label">Frame Stroke Colour (optional)</label>
+        <div class="color-inputs">
+          <input
+            type="color"
+            class="color-swatch-input"
+            [ngModel]="params().frameStrokeHex ?? '#8B5CF6'"
+            (ngModelChange)="patch({ frameStrokeHex: $event })"
+          />
+          <input
+            type="text"
+            class="fs-input mono"
+            placeholder="None (e.g. #8B5CF6)"
+            [ngModel]="params().frameStrokeHex ?? ''"
+            (ngModelChange)="patch({ frameStrokeHex: $event ? $event : null })"
+          />
+        </div>
+      </div>
+    }
   </div>
 
   <div class="bg-row">
@@ -96,6 +116,20 @@
         })
       "
     />
+
+    @if (params().removeBackground) {
+      <div class="fs-field">
+        <fs-slider
+          label="Chroma Key Tolerance (ΔE)"
+          [min]="5"
+          [max]="120"
+          [step]="1"
+          [value]="params().bgRemovalTolerance ?? 38"
+          [format]="formatInt"
+          (valueChange)="patch({ bgRemovalTolerance: $event })"
+        />
+      </div>
+    }
 
     @if (!params().removeBackground) {
       <div class="color-picker-row">

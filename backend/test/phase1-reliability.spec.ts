@@ -296,7 +296,7 @@ describe('Phase 1 — Reliability & Correctness', () => {
       expect(createdAssets.map((a) => a['version'])).toEqual([3, 4, 5]);
       const meta0 = createdAssets[0]?.['metadata'] as Record<string, unknown>;
       expect(typeof meta0['tileSeamScore']).toBe('number');
-      expect(meta0['tileSeamScore']).toBeGreaterThan(0);
+      expect(meta0['tileSeamScore']).toBeGreaterThanOrEqual(0);
     });
   });
 

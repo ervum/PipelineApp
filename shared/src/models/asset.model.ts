@@ -23,6 +23,7 @@ export interface AssetFileModel {
 
 export interface VoiceAlignment {
   words: Array<{ word: string; startMs: number; endMs: number }>;
+  source?: 'PROVIDER' | 'ESTIMATED';
 }
 
 export type AssetMetadata =

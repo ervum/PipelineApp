@@ -22,7 +22,12 @@
 
     @if (words().length > 0) {
       <div class="word-timeline-section">
-        <span class="section-label">Word Alignment Timeline (click word to seek)</span>
+        <span class="section-label">
+          Word Alignment Timeline (click word to seek)
+          @if (isEstimatedTiming()) {
+            <span class="emotion-chip">ESTIMATED TIMING</span>
+          }
+        </span>
         <div class="word-timeline-track">
           @for (w of words(); track w.index) {
             <button

@@ -35,16 +35,44 @@ export class IconPostProcessor {
     supportsNativeTransparency: boolean,
   ): Promise<IconPostProcessResult> {
     const removeBg = params.removeBackground !== false;
-    const processed =
+    const tolerance = params.bgRemovalTolerance ?? 38;
+    let processed =
       removeBg && !supportsNativeTransparency
-        ? await this.imageProc.chromaKeyToAlpha(rawPng)
+        ? await this.imageProc.chromaKeyToAlpha(rawPng, { tolerance })
         : rawPng;
+
+    if (!removeBg && params.solidBackgroundHex) {
+      processed = await this.imageProc.applySolidBackground(
+        processed,
+        params.solidBackgroundHex,
+      );
+    }
+
+    if (params.frameShape && params.frameShape !== 'NONE') {
+      processed = await this.imageProc.applyFrameMask(
+        processed,
+        params.frameShape,
+        params.frameStrokeHex ?? null,
+      );
+    }
 
     const [probe, variants, thumb] = await Promise.all([
       this.imageProc.probe(processed),
       this.imageProc.iconVariants(processed),
       this.imageProc.thumbnail(processed, 256),
     ]);
+
+    if (
+      params.outputSize &&
+      (probe.width !== params.outputSize || probe.height !== params.outputSize)
+    ) {
+      processed =
+        params.outputSize === 512
+          ? variants[512]
+          : await this.imageProc.resizeSquare(processed, params.outputSize);
+      probe.width = params.outputSize;
+      probe.height = params.outputSize;
+    }
 
     const extraFiles: ProcessedFileEntry[] = [
       {

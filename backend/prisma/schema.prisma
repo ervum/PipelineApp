@@ -152,6 +152,8 @@ enum AssetFileRole {
   ALIGNMENT
   METADATA
   SOURCE_REFERENCE
+  LOD1
+  LOD2
 }
 
 // ───────────────────────────── Projects & Vault ─────────────────────────────
