@@ -268,10 +268,11 @@ export class AudioPostProcessor {
     ) {
       try {
         const info = parseWavHeader(wavBuffer);
+        const dataOffset = 44;
         const bytesPerSample = Math.max(1, Math.floor(info.bitsPerSample / 8));
         if (bytesPerSample === 2 && info.sampleRate > 0) {
           const totalSamples = Math.floor(
-            Math.min(info.dataByteLength, wavBuffer.length - info.dataOffset) /
+            Math.min(info.dataBytes, wavBuffer.length - dataOffset) /
               (2 * info.numChannels),
           );
           const winSamples = Math.max(64, Math.floor(info.sampleRate * 0.02));
@@ -284,7 +285,7 @@ export class AudioPostProcessor {
               const baseSample = w * winSamples;
               for (let s = 0; s < winSamples; s++) {
                 const byteIdx =
-                  info.dataOffset + (baseSample + s) * info.numChannels * 2;
+                  dataOffset + (baseSample + s) * info.numChannels * 2;
                 if (byteIdx + 2 <= wavBuffer.length) {
                   const val = wavBuffer.readInt16LE(byteIdx) / 32768;
                   sumSq += val * val;

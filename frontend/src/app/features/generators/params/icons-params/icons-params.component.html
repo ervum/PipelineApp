@@ -124,7 +124,7 @@
           [min]="5"
           [max]="120"
           [step]="1"
-          [value]="params().bgRemovalTolerance ?? 38"
+          [value]="params().bgRemovalTolerance"
           [format]="formatInt"
           (valueChange)="patch({ bgRemovalTolerance: $event })"
         />

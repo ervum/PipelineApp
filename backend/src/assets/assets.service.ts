@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import {
+  ApprovalStatus,
   AssetFileRole,
   AssetListQueryDto,
   AssetModel,
@@ -16,7 +17,7 @@ import {
   VaultFileModel,
   VisionStatus,
 } from '@forge/shared';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DomainError } from '../common/errors/domain.error';
 import { toAssetModel } from '../common/mappers/asset.mapper';
@@ -30,6 +31,7 @@ import {
   JobEventsPublisherPort,
 } from '../orchestrator/job-events.port';
 import { PrismaService } from '../prisma/prisma.service';
+import { EngineExportService } from '../projects-vault/engine-export.service';
 import { kindFromNameAndMime } from '../projects-vault/vault-files.service';
 import { VisionAnalysisService } from '../projects-vault/vision-analysis.service';
 import { ImageProcessingService } from '../storage/image-processing.service';
@@ -53,6 +55,8 @@ export class AssetsService {
     private readonly processor: JobProcessorService,
     @Inject(JOB_EVENTS_PUBLISHER)
     private readonly eventsPublisher: JobEventsPublisherPort,
+    @Optional()
+    private readonly engineExport?: EngineExportService,
   ) {}
 
   async list(query: AssetListQueryDto): Promise<Paginated<AssetModel>> {
@@ -175,6 +179,10 @@ export class AssetsService {
       },
       include: ASSET_INCLUDE,
     });
+
+    if (dto.approval === ApprovalStatus.FINAL && this.engineExport) {
+      await this.engineExport.syncOnAssetFinalized(updated.projectId);
+    }
 
     const providerMap = await this.buildProviderNameMap(
       updated.providerConfigId ? [updated.providerConfigId] : [],

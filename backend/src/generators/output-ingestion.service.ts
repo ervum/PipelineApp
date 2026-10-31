@@ -193,8 +193,10 @@ export class OutputIngestionService {
                 modality: 'ICONS_2D',
                 iconCategory: 'ITEM',
                 frameShape: 'NONE',
+                frameStrokeHex: '#E5E7EB',
                 outputSize: 1024,
                 removeBackground: true,
+                bgRemovalTolerance: 38,
                 solidBackgroundHex: null,
                 batchCount: 1,
                 seed: null,
@@ -550,13 +552,18 @@ export class OutputIngestionService {
         const vfxParams =
           ctx.params.modality === Modality.OTHER ? ctx.params.vfx : null;
         let unblendedSourceBuf: Buffer | null = null;
-        const seam = vfxParams?.tileable
-          ? await this.imageProc.makeSeamless(primaryBuf)
-          : await this.imageProc.makeTileable(primaryBuf);
-        if ('blended' in seam && seam.blended) {
-          unblendedSourceBuf = primaryBuf;
-          primaryBuf = seam.buffer;
-          primaryMime = 'image/png';
+        let tileSeamScore: number;
+        if (vfxParams?.tileable) {
+          const seam = await this.imageProc.makeSeamless(primaryBuf);
+          tileSeamScore = seam.seamScore;
+          if (seam.blended) {
+            unblendedSourceBuf = primaryBuf;
+            primaryBuf = seam.buffer;
+            primaryMime = 'image/png';
+          }
+        } else {
+          const seam = await this.imageProc.makeTileable(primaryBuf);
+          tileSeamScore = seam.seamScore;
         }
         const [probe, thumb] = await Promise.all([
           this.imageProc.probe(primaryBuf),
@@ -566,7 +573,7 @@ export class OutputIngestionService {
           modality: 'OTHER',
           subMode: GenerationSubMode.VFX_TEXTURE,
           frameSize: probe.width,
-          tileSeamScore: seam.seamScore,
+          tileSeamScore,
         };
 
         filesToStore.push({

@@ -62,7 +62,30 @@ This document records implementation choices made where minor low-level details 
    - `VisionAnalysisService` implements `OnApplicationBootstrap` to recover interrupted `RUNNING` / `PENDING` `VaultFile` rows on startup and retries failed analyses up to `MAX_VISION_ATTEMPTS = 3`.
    - Added `McpInvocationLog` (`mcp_invocation_logs`) and the `mcp:invocation` Socket.IO event so invocations from both `HTTP_RPC`, `PLAYGROUND`, and separate `STDIO` processes are persisted and streamed to `/mcp`.
 
+## Phases 2–7 Quality, Intelligence, Editing, Orchestration, Workflows & Engine Export Roadmap
 
-
-
+1. **Phase 2 — Media Post-Processing Quality**:
+   - **SVG Frame Masks (`backend/src/synth/frame-masks.ts`)**: `IconPostProcessor` composites `CIRCLE`, `ROUNDED_SQUARE`, `HEXAGON`, `SHIELD`, and `DIAMOND` decorative SVG masks and enforces `SOLID` background flattening while preserving 4-channel RGBA.
+   - **Perceptual CIELAB $\Delta E$ Chroma-Key & Interior Island Removal**: `ImageProcessingService.chromaKeyToAlpha()` converts pixels to CIELAB, flood-fills from borders using perceptual $\Delta E$, clears small background-colored enclosed interior islands (such as gaps inside handles or armor), and decontaminates fringe RGB channels.
+   - **Cosine-Feathered Seamless Tiling (`ImageProcessingService.makeSeamless()`)**: Blends opposite-edge wrap bands using a raised-cosine feather curve, reducing `tileSeamScore` to near zero while archiving the unblended original as `AssetFileRole.SOURCE_REFERENCE`.
+   - **Multi-Format Audio Probing & RMS Envelope Word Alignment (`AudioPostProcessor`)**: Parses WAV, MP3 (ID3v2 + MPEG frame header), and OGG Vorbis (`vorbis` identification header) containers, and estimates word timestamps from the WAV RMS energy envelope when providers omit alignment JSON (`source: 'ESTIMATED'`).
+   - **3D `.obj` Inspection, Isometric `.glb` Software Rasterizer & Automatic LODs (`Model3dPostProcessor`)**: Parses Wavefront `.obj` geometry (`v`/`vt`/`vn`/`f`), renders shaded isometric `.glb` thumbnails from `POSITION` + `NORMAL` buffers, and generates `LOD1` (50% decimation) and `LOD2` (25% decimation) `.glb` variants via 3D grid vertex clustering.
+2. **Phase 3 — Vault & Middleman Intelligence**:
+   - **Lossless Vault Metadata & Multimodal Context (`AssetsService.saveToVault()`, `ContextAssemblerService`)**: Preserves full `asset.metadata`, `enhancedPrompt`, `rawPrompt`, `tags`, and `notes` on `VaultFile.metadata` and renders structured context lines for `AUDIO`, `MODEL_3D`, and `VIDEO` vault files.
+   - **Section-Aware Markdown Truncation & Hybrid Relevance Ranking**: Splits Markdown by headings, scores sections and `SCOPE`-tier candidates by prompt keyword stem + character trigram overlap, and packs the highest-relevance sections within the token budget.
+   - **Palette Compliance Scoring & LAB Nearest-Color Remapping (`ImageProcessingService`)**: Scores generated images against the active `COLOR_PALETTE` vault file (`paletteComplianceScore`, `outOfPaletteRatio`) and provides `POST /api/v1/assets/:id/palette-remap`.
+3. **Phase 4 — In-Stage Editing & Refinement Tools**:
+   - **Text/Lore/Shader Versioning (`POST /api/v1/assets/:id/revise`)**: Creates a new lineage version inside `assetGroupId` from edited Markdown or shader/code buffers in `LorePreviewerComponent` and `CodePreviewComponent`.
+   - **Mask-Guided Inpainting & Outpainting (`ImageProcessingService.compositeInpaint()`)**: Supports `INPAINT` and `OUTPAINT` sub-modes with feathered alpha mask compositing.
+   - **Non-Destructive Audio Trim/Fade/Loop-Crossfade (`editWavAudio()`, `POST /api/v1/assets/:id/audio-edit`)**: Performs PCM trimming, fade-in/out, and raised-cosine S-curve tail-to-head loop crossfading (`loopCrossfadeMs`), wired to `"Fix Loop Seam"` in `DualWaveformPlayerComponent`.
+   - **PBR Map Derivation (`ImageProcessingService.derivePbrMaps()`, `POST /api/v1/assets/:id/derive-pbr`)**: Derives tangent-space normal maps (3×3 Sobel height gradients) and glTF-standard packed `ORM` (Occlusion-Roughness-Metallic) maps stored as `AssetFileRole.TEXTURE_NORMAL` and `AssetFileRole.TEXTURE_ORM`.
+4. **Phase 5 — Provider Orchestration, Failover & Cost Analytics**:
+   - **Automatic Failover Chains (`fallbackProviderIds`)**: `JobStateService.transition()` automatically reroutes failed jobs to the next healthy fallback provider in `ProviderSettingsSchema.fallbackProviderIds`.
+   - **Multi-Provider Arena (`POST /api/v1/jobs/arena`) & Cost Analytics (`GET /api/v1/jobs/analytics/summary`)**: Dispatches synchronized comparison jobs sharing an `arenaGroupId` and enforces `monthlyBudgetUsd` pre-flight caps.
+5. **Phase 6 — Multi-Step Workflows, Batch Matrix & Dialogue Sequencer**:
+   - **Cross-Modality Pipeline Engine (`POST /api/v1/jobs/pipeline`)**: Topologically sorts DAG steps with Kahn's algorithm, detects cycles, and interpolates `{{steps.<id>.text}}`, `{{steps.<id>.assetId}}`, and `{{steps.<id>.primaryStorageKey}}` across steps.
+   - **Batch Matrix Runner (`POST /api/v1/jobs/batch-matrix`)**: Expands Cartesian variable grids (or explicit row tables) up to 50 jobs per batch with `{{column}}` interpolation.
+   - **Multi-Speaker Dialogue Sequencer (`POST /api/v1/jobs/dialogue-scene`)**: Parses `Speaker [emotion]: line` scripts, synthesizes per-speaker turns, and stitches a master scene WAV with offset-adjusted speaker-tagged word alignment.
+6. **Phase 7 — Game Engine Export Bundles & Live Watched-Folder Sync**:
+   - **`EngineExportService` (`POST /api/v1/projects/:id/export`, `PUT /api/v1/projects/:id/sync-config`)**: Pure-TypeScript PKZIP builder and engine exporter generating `.import` + `forge_manifest.tres` for Godot 4, deterministic 32-hex GUID `.meta` YAML sidecars for Unity, and Rojo `default.project.json` + `AssetManifest.luau` for Roblox, plus automatic local directory sync when assets reach `ApprovalStatus.FINAL`.
 

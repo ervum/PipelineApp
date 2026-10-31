@@ -21,3 +21,26 @@ export const UpdateProjectSchema = CreateProjectSchema.partial().extend({
 
 export type CreateProjectDto = z.infer<typeof CreateProjectSchema>;
 export type UpdateProjectDto = z.infer<typeof UpdateProjectSchema>;
+
+export const ExportEngineSchema = z.enum(['GODOT', 'UNITY', 'ROBLOX', 'GENERIC']);
+export type ExportEngine = z.infer<typeof ExportEngineSchema>;
+
+export const ExportApprovalFilterSchema = z.enum(['FINAL_ONLY', 'APPROVED_AND_FINAL', 'ALL']);
+export type ExportApprovalFilter = z.infer<typeof ExportApprovalFilterSchema>;
+
+export const ExportProjectBundleSchema = z.object({
+  targetEngine: ExportEngineSchema.default('GODOT'),
+  approvalFilter: ExportApprovalFilterSchema.default('APPROVED_AND_FINAL'),
+  includeLodFiles: z.boolean().default(true),
+  includePbrMaps: z.boolean().default(true),
+  syncToDir: z.string().trim().min(1).max(500).optional(),
+});
+export type ExportProjectBundleDto = z.infer<typeof ExportProjectBundleSchema>;
+
+export const ConfigureSyncDirectorySchema = z.object({
+  targetDir: z.string().trim().max(500).nullable(),
+  targetEngine: ExportEngineSchema.default('GODOT'),
+  autoSyncOnFinal: z.boolean().default(true),
+});
+export type ConfigureSyncDirectoryDto = z.infer<typeof ConfigureSyncDirectorySchema>;
+

@@ -132,7 +132,7 @@ export class JobsService {
         },
         _sum: { costUsd: true },
       });
-      const spentUsd = spent._sum.costUsd ?? 0;
+      const spentUsd = Number(spent._sum.costUsd ?? 0);
       if (spentUsd >= provider.settings.monthlyBudgetUsd) {
         throw new DomainError(
           ErrorCode.VALIDATION_FAILED,
@@ -718,7 +718,7 @@ export class JobsService {
     const dailyMap = new Map<string, { jobCount: number; costUsd: number }>();
 
     for (const j of jobs) {
-      const cost = j.costUsd ?? 0;
+      const cost = Number(j.costUsd ?? 0);
       totalCostUsd += cost;
       if (j.status === JobStatus.COMPLETED) completedJobs++;
       if (j.status === JobStatus.FAILED) failedJobs++;
@@ -1126,7 +1126,7 @@ export class JobsService {
         providerConfigId: null,
         providerKind: ProviderKind.DEMO,
         providerModel: 'dialogue-sequencer-v1',
-        tier: ExecutionTier.FREE,
+        tier: ExecutionTier.LOCAL,
         seed: dto.seed ?? 1001,
         costUsd: 0,
         executionMs: 50,

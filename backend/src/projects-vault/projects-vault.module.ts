@@ -3,6 +3,7 @@ import { ContextAssemblerService } from '../middleman/context-assembler.service'
 import { LlmModule } from '../middleman/llm/llm.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { StorageModule } from '../storage/storage.module';
+import { EngineExportService } from './engine-export.service';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 import { VaultContextService } from './vault-context.service';
@@ -24,6 +25,7 @@ import { VoiceProfilesService } from './voice-profiles.service';
   ],
   providers: [
     ProjectsService,
+    EngineExportService,
     VaultFoldersService,
     VaultFilesService,
     VoiceProfilesService,
@@ -33,6 +35,7 @@ import { VoiceProfilesService } from './voice-profiles.service';
   ],
   exports: [
     ProjectsService,
+    EngineExportService,
     VaultFoldersService,
     VaultFilesService,
     VoiceProfilesService,
