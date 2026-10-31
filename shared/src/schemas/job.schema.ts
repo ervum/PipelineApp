@@ -77,7 +77,27 @@ export const JobListQuerySchema = z.object({
   cursor: z.string().optional(),
 });
 
+export const CreateArenaJobSchema = z.object({
+  projectId: IdSchema,
+  executionMode: z.enum(['AUTO_FIRE', 'INTERCEPT']).default('AUTO_FIRE'),
+  rawPrompt: z.string().trim().min(1).max(4000),
+  pinnedFileIds: z.array(IdSchema).max(12).default([]),
+  params: ModalityParamsSchema,
+  providerTargets: z
+    .array(
+      z.object({
+        providerConfigId: IdSchema,
+        providerModel: z.string().max(200).nullable().optional().default(null),
+      }),
+    )
+    .min(2)
+    .max(4),
+  middlemanProfileId: IdSchema.nullable().default(null),
+  skipMiddleman: z.boolean().default(false),
+});
+
 export type CreateJobDto = z.infer<typeof CreateJobSchema>;
+export type CreateArenaJobDto = z.infer<typeof CreateArenaJobSchema>;
 export type UpdateCompiledDto = z.infer<typeof UpdateCompiledSchema>;
 export type RecompileDto = z.infer<typeof RecompileSchema>;
 export type JobListQueryDto = z.infer<typeof JobListQuerySchema>;

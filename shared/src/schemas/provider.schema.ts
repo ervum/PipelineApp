@@ -43,6 +43,8 @@ export const ProviderSettingsSchema = z
     autoDeleteCreatedChats: z.boolean().default(false),
     autoRetry: z.boolean().default(true),
     maxAttempts: z.number().int().min(1).max(10).default(3),
+    fallbackProviderIds: z.array(z.string()).default([]),
+    monthlyBudgetUsd: z.number().min(0).nullable().optional().default(null),
   })
   .partial();
 

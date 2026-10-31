@@ -1,4 +1,5 @@
 import {
+  CreateArenaJobDto,
   CreateJobDto,
   ErrorCode,
   ExecutionMode,
@@ -99,6 +100,33 @@ export class JobsService {
         400,
         `Provider "${provider.name}" does not support modality "${modality}"`,
       );
+    }
+
+    // 5.3 Monthly budget cap check
+    if (
+      typeof provider.settings.monthlyBudgetUsd === 'number' &&
+      provider.settings.monthlyBudgetUsd > 0 &&
+      typeof this.prisma.generationJob?.aggregate === 'function'
+    ) {
+      const now = new Date();
+      const monthStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
+      const spent = await this.prisma.generationJob.aggregate({
+        where: {
+          providerConfigId: provider.id,
+          createdAt: { gte: monthStart },
+        },
+        _sum: { costUsd: true },
+      });
+      const spentUsd = spent._sum.costUsd ?? 0;
+      if (spentUsd >= provider.settings.monthlyBudgetUsd) {
+        throw new DomainError(
+          ErrorCode.VALIDATION_FAILED,
+          402,
+          `Provider "${provider.name}" has reached its monthly budget cap ($${spentUsd.toFixed(2)} / $${provider.settings.monthlyBudgetUsd.toFixed(2)})`,
+        );
+      }
     }
 
     const subMode =
@@ -539,6 +567,251 @@ export class JobsService {
     this.eventsPublisher.jobCreated({ job: model });
     void this.processor.tick();
     return model;
+  }
+
+  /**
+   * 5.2 Multi-Provider Arena: dispatches 2..4 parallel jobs across competing providers/models
+   * with a shared seed and arenaGroupId for side-by-side comparison.
+   */
+  async createArena(
+    dto: CreateArenaJobDto,
+  ): Promise<{ arenaGroupId: string; jobs: JobModel[] }> {
+    const arenaGroupId = `arn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const sharedSeed =
+      'seed' in dto.params && typeof dto.params.seed === 'number'
+        ? dto.params.seed
+        : Math.floor(Math.random() * SEED_MAX);
+
+    const jobs: JobModel[] = [];
+    for (const target of dto.providerTargets) {
+      const job = await this.create({
+        projectId: dto.projectId,
+        executionMode: dto.executionMode,
+        rawPrompt: dto.rawPrompt,
+        pinnedFileIds: dto.pinnedFileIds,
+        params: {
+          ...dto.params,
+          seed: sharedSeed,
+        } as ModalityParams,
+        advanced: { __arenaGroupId: arenaGroupId },
+        providerConfigId: target.providerConfigId,
+        providerModel: target.providerModel ?? null,
+        middlemanProfileId: dto.middlemanProfileId ?? null,
+        skipMiddleman: dto.skipMiddleman ?? false,
+        parentAssetId: null,
+      });
+      jobs.push(job);
+    }
+
+    return { arenaGroupId, jobs };
+  }
+
+  /**
+   * 5.3 Cost, Latency & Token Analytics Summary across modalities, providers, and daily timeline.
+   */
+  async getAnalyticsSummary(projectId?: string, days = 30): Promise<{
+    totalJobs: number;
+    completedJobs: number;
+    failedJobs: number;
+    totalCostUsd: number;
+    avgExecutionMs: number;
+    avgQueueDelayMs: number;
+    avgColdStartMs: number;
+    byModality: Array<{
+      modality: string;
+      jobCount: number;
+      completedCount: number;
+      costUsd: number;
+      avgExecutionMs: number;
+    }>;
+    byProvider: Array<{
+      providerConfigId: string;
+      providerName: string;
+      jobCount: number;
+      successRate: number;
+      costUsd: number;
+      avgExecutionMs: number;
+      monthlyBudgetUsd: number | null;
+    }>;
+    dailySeries: Array<{
+      date: string;
+      jobCount: number;
+      costUsd: number;
+    }>;
+  }> {
+    const since = new Date(Date.now() - Math.max(1, days) * 86_400_000);
+    const where: Prisma.GenerationJobWhereInput = {
+      createdAt: { gte: since },
+      ...(projectId ? { projectId } : {}),
+    };
+
+    const [jobs, providers] = await Promise.all([
+      this.prisma.generationJob.findMany({
+        where,
+        select: {
+          id: true,
+          modality: true,
+          status: true,
+          providerConfigId: true,
+          costUsd: true,
+          executionMs: true,
+          queueDelayMs: true,
+          coldStartMs: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.aiProviderConfig.findMany({
+        select: {
+          id: true,
+          name: true,
+          settings: true,
+        },
+      }),
+    ]);
+
+    const providerMap = new Map(providers.map((p) => [p.id, p]));
+
+    let completedJobs = 0;
+    let failedJobs = 0;
+    let totalCostUsd = 0;
+    let execSum = 0;
+    let execCount = 0;
+    let queueSum = 0;
+    let queueCount = 0;
+    let coldSum = 0;
+    let coldCount = 0;
+
+    const modMap = new Map<
+      string,
+      {
+        jobCount: number;
+        completedCount: number;
+        costUsd: number;
+        execSum: number;
+        execCount: number;
+      }
+    >();
+    const provStats = new Map<
+      string,
+      {
+        jobCount: number;
+        completedCount: number;
+        costUsd: number;
+        execSum: number;
+        execCount: number;
+      }
+    >();
+    const dailyMap = new Map<string, { jobCount: number; costUsd: number }>();
+
+    for (const j of jobs) {
+      const cost = j.costUsd ?? 0;
+      totalCostUsd += cost;
+      if (j.status === JobStatus.COMPLETED) completedJobs++;
+      if (j.status === JobStatus.FAILED) failedJobs++;
+
+      if (typeof j.executionMs === 'number' && j.executionMs > 0) {
+        execSum += j.executionMs;
+        execCount++;
+      }
+      if (typeof j.queueDelayMs === 'number' && j.queueDelayMs >= 0) {
+        queueSum += j.queueDelayMs;
+        queueCount++;
+      }
+      if (typeof j.coldStartMs === 'number' && j.coldStartMs > 0) {
+        coldSum += j.coldStartMs;
+        coldCount++;
+      }
+
+      const mEntry = modMap.get(j.modality) ?? {
+        jobCount: 0,
+        completedCount: 0,
+        costUsd: 0,
+        execSum: 0,
+        execCount: 0,
+      };
+      mEntry.jobCount++;
+      if (j.status === JobStatus.COMPLETED) mEntry.completedCount++;
+      mEntry.costUsd += cost;
+      if (typeof j.executionMs === 'number' && j.executionMs > 0) {
+        mEntry.execSum += j.executionMs;
+        mEntry.execCount++;
+      }
+      modMap.set(j.modality, mEntry);
+
+      const pEntry = provStats.get(j.providerConfigId) ?? {
+        jobCount: 0,
+        completedCount: 0,
+        costUsd: 0,
+        execSum: 0,
+        execCount: 0,
+      };
+      pEntry.jobCount++;
+      if (j.status === JobStatus.COMPLETED) pEntry.completedCount++;
+      pEntry.costUsd += cost;
+      if (typeof j.executionMs === 'number' && j.executionMs > 0) {
+        pEntry.execSum += j.executionMs;
+        pEntry.execCount++;
+      }
+      provStats.set(j.providerConfigId, pEntry);
+
+      const dayKey = j.createdAt.toISOString().slice(0, 10);
+      const dEntry = dailyMap.get(dayKey) ?? { jobCount: 0, costUsd: 0 };
+      dEntry.jobCount++;
+      dEntry.costUsd += cost;
+      dailyMap.set(dayKey, dEntry);
+    }
+
+    const byModality = [...modMap.entries()].map(([modality, st]) => ({
+      modality,
+      jobCount: st.jobCount,
+      completedCount: st.completedCount,
+      costUsd: Number(st.costUsd.toFixed(6)),
+      avgExecutionMs: st.execCount > 0 ? Math.round(st.execSum / st.execCount) : 0,
+    }));
+
+    const byProvider = [...provStats.entries()].map(([providerConfigId, st]) => {
+      const prov = providerMap.get(providerConfigId);
+      const settingsObj =
+        typeof prov?.settings === 'object' && prov.settings !== null
+          ? (prov.settings as Record<string, unknown>)
+          : {};
+      const monthlyBudgetUsd =
+        typeof settingsObj['monthlyBudgetUsd'] === 'number'
+          ? settingsObj['monthlyBudgetUsd']
+          : null;
+      return {
+        providerConfigId,
+        providerName: prov?.name ?? providerConfigId,
+        jobCount: st.jobCount,
+        successRate:
+          st.jobCount > 0
+            ? Number(((st.completedCount / st.jobCount) * 100).toFixed(1))
+            : 100,
+        costUsd: Number(st.costUsd.toFixed(6)),
+        avgExecutionMs: st.execCount > 0 ? Math.round(st.execSum / st.execCount) : 0,
+        monthlyBudgetUsd,
+      };
+    });
+
+    const dailySeries = [...dailyMap.entries()].map(([date, st]) => ({
+      date,
+      jobCount: st.jobCount,
+      costUsd: Number(st.costUsd.toFixed(6)),
+    }));
+
+    return {
+      totalJobs: jobs.length,
+      completedJobs,
+      failedJobs,
+      totalCostUsd: Number(totalCostUsd.toFixed(6)),
+      avgExecutionMs: execCount > 0 ? Math.round(execSum / execCount) : 0,
+      avgQueueDelayMs: queueCount > 0 ? Math.round(queueSum / queueCount) : 0,
+      avgColdStartMs: coldCount > 0 ? Math.round(coldSum / coldCount) : 0,
+      byModality,
+      byProvider,
+      dailySeries,
+    };
   }
 
   private async findOrThrow(id: string): Promise<GenerationJobWithRelations> {

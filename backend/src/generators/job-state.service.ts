@@ -35,6 +35,9 @@ interface LockedJobRow {
   maxAttempts?: number;
   compiledPayload?: unknown;
   skipMiddleman?: boolean;
+  providerConfigId?: string;
+  modality?: string;
+  userParams?: unknown;
 }
 
 @Injectable()
@@ -58,7 +61,8 @@ export class JobStateService {
       await this.prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<LockedJobRow[]>`
           SELECT "id", "projectId", "status", "startedAt", "errorCode", "errorMessage",
-                 "attempt", "maxAttempts", "compiledPayload", "skipMiddleman"
+                 "attempt", "maxAttempts", "compiledPayload", "skipMiddleman",
+                 "providerConfigId", "modality", "userParams"
           FROM "generation_jobs"
           WHERE "id" = ${jobId}
           FOR UPDATE
@@ -135,6 +139,141 @@ export class JobStateService {
             effectiveMsg: retryMsg,
             projectId: row.projectId,
           };
+        }
+
+        // 5.1 Automatic Provider Failover when current provider retries are exhausted
+        const canTryFailover =
+          to === JobStatus.FAILED &&
+          opts?.retryable === true &&
+          !NON_RETRYABLE_ERROR_CODES.has(patchErrorCode) &&
+          typeof row.providerConfigId === 'string';
+
+        if (canTryFailover) {
+          const providerDelegate = (
+            tx as unknown as {
+              aiProviderConfig?: {
+                findUnique?: (args: unknown) => Promise<{
+                  id: string;
+                  name: string;
+                  settings: unknown;
+                } | null>;
+                findMany?: (args: unknown) => Promise<
+                  Array<{
+                    id: string;
+                    name: string;
+                    defaultModel: string | null;
+                    tier: string;
+                    isEnabled: boolean;
+                    modalities: string[];
+                    settings: unknown;
+                  }>
+                >;
+              };
+            }
+          ).aiProviderConfig;
+
+          if (providerDelegate?.findUnique && providerDelegate?.findMany) {
+            const curProv = await providerDelegate.findUnique({
+              where: { id: row.providerConfigId },
+            });
+            const settingsObj =
+              typeof curProv?.settings === 'object' && curProv.settings !== null
+                ? (curProv.settings as Record<string, unknown>)
+                : {};
+            const fallbackIds = Array.isArray(settingsObj['fallbackProviderIds'])
+              ? (settingsObj['fallbackProviderIds'] as string[])
+              : [];
+
+            if (fallbackIds.length > 0) {
+              const rawUserParams =
+                typeof row.userParams === 'object' && row.userParams !== null
+                  ? (row.userParams as Record<string, unknown>)
+                  : {};
+              const triedIds = new Set<string>(
+                Array.isArray(rawUserParams['__triedProviderIds'])
+                  ? (rawUserParams['__triedProviderIds'] as string[])
+                  : [row.providerConfigId!],
+              );
+              triedIds.add(row.providerConfigId!);
+
+              const untriedIds = fallbackIds.filter((id) => !triedIds.has(id));
+              if (untriedIds.length > 0) {
+                const candidates = await providerDelegate.findMany({
+                  where: { id: { in: untriedIds }, isEnabled: true },
+                });
+                const byId = new Map(candidates.map((c) => [c.id, c]));
+                const nextProvider = untriedIds
+                  .map((id) => byId.get(id))
+                  .find(
+                    (c) =>
+                      c &&
+                      (!row.modality || c.modalities.includes(row.modality)),
+                  );
+
+                if (nextProvider) {
+                  const hasCompiled =
+                    (row.compiledPayload !== null &&
+                      row.compiledPayload !== undefined) ||
+                    Boolean(row.skipMiddleman);
+                  const failoverTarget = hasCompiled
+                    ? JobStatus.READY
+                    : JobStatus.QUEUED;
+                  const nextSettings =
+                    typeof nextProvider.settings === 'object' &&
+                    nextProvider.settings !== null
+                      ? (nextProvider.settings as Record<string, unknown>)
+                      : {};
+                  const nextMaxAttempts =
+                    nextSettings['autoRetry'] === false
+                      ? 1
+                      : typeof nextSettings['maxAttempts'] === 'number'
+                        ? nextSettings['maxAttempts']
+                        : (row.maxAttempts ?? 3);
+
+                  const failoverMsg = `Failover to provider "${nextProvider.name}" after ${curProv?.name ?? row.providerConfigId} failed (${message || patchErrorCode})`;
+                  const updatedUserParams = {
+                    ...rawUserParams,
+                    __triedProviderIds: [...triedIds, nextProvider.id],
+                  };
+
+                  const jobRow = await tx.generationJob.update({
+                    where: { id: jobId },
+                    data: {
+                      ...patch,
+                      status: failoverTarget,
+                      providerConfig: { connect: { id: nextProvider.id } },
+                      providerModel: nextProvider.defaultModel,
+                      tier: nextProvider.tier as never,
+                      attempt: 1,
+                      maxAttempts: nextMaxAttempts,
+                      notBefore: now,
+                      completedAt: null,
+                      userParams:
+                        updatedUserParams as unknown as Prisma.InputJsonValue,
+                    },
+                  });
+
+                  await tx.generationJobEvent.create({
+                    data: {
+                      jobId,
+                      type: 'provider-failover',
+                      fromStatus: currentStatus,
+                      toStatus: failoverTarget,
+                      message: failoverMsg,
+                    },
+                  });
+
+                  return {
+                    updated: jobRow,
+                    from: currentStatus,
+                    effectiveTo: failoverTarget,
+                    effectiveMsg: failoverMsg,
+                    projectId: row.projectId,
+                  };
+                }
+              }
+            }
+          }
         }
 
         const isTerminal = TERMINAL_JOB_STATUSES.includes(to);

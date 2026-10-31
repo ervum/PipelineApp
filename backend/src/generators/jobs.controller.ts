@@ -1,4 +1,6 @@
 import {
+  CreateArenaJobDto,
+  CreateArenaJobSchema,
   CreateJobDto,
   CreateJobSchema,
   JobEventModel,
@@ -19,6 +21,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ZodBody, ZodQuery } from '../common/decorators/zod-body.decorator';
 import { JobsService } from './jobs.service';
@@ -31,6 +34,23 @@ export class JobsController {
   @HttpCode(HttpStatus.CREATED)
   async create(@ZodBody(CreateJobSchema) dto: CreateJobDto): Promise<JobModel> {
     return this.jobsService.create(dto);
+  }
+
+  @Post('arena')
+  @HttpCode(HttpStatus.CREATED)
+  async createArena(
+    @ZodBody(CreateArenaJobSchema) dto: CreateArenaJobDto,
+  ): Promise<{ arenaGroupId: string; jobs: JobModel[] }> {
+    return this.jobsService.createArena(dto);
+  }
+
+  @Get('analytics/summary')
+  async analyticsSummary(
+    @Query('projectId') projectId?: string,
+    @Query('days') daysRaw?: string,
+  ): Promise<ReturnType<JobsService['getAnalyticsSummary']>> {
+    const days = daysRaw ? Math.max(1, Math.min(365, Number(daysRaw) || 30)) : 30;
+    return this.jobsService.getAnalyticsSummary(projectId, days);
   }
 
   @Get()
